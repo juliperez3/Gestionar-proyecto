@@ -1292,7 +1292,7 @@ export default function CrearProyecto() {
               </Button>
               <div>
                 <h1 className="text-3xl font-bold">Alta ProyectoPuestoCarrera</h1>
-                <p className="text-muted-foreground">Puesto: {puestoActual?.nombrePuesto || 'Puesto'}</p>
+                <p className="text-muted-foreground">Puesto: {puestoActual?.nombrePuesto || "Puesto"}</p>
               </div>
             </div>
           </div>
@@ -1781,5 +1781,7 @@ export default function CrearProyecto() {
             </div>
           </CardContent>
         </Card>
-      </div>\
+      </div>
     </div>
+  )
+}
