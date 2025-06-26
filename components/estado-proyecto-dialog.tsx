@@ -34,6 +34,7 @@ interface EstadoProyectoDialogProps {
   proyecto: Proyecto | null
   onSave: (proyecto: Proyecto) => void
   onFinalizarProyecto?: (proyecto: Proyecto) => boolean
+  onIniciarProyecto?: (proyecto: Proyecto) => boolean
 }
 
 const getAvailableActions = (estado: string) => {
@@ -143,6 +144,7 @@ export function EstadoProyectoDialog({
   proyecto,
   onSave,
   onFinalizarProyecto,
+  onIniciarProyecto,
 }: EstadoProyectoDialogProps) {
   const [selectedAction, setSelectedAction] = useState<string | null>(null)
   const [showConfirmation, setShowConfirmation] = useState(false)
@@ -153,6 +155,16 @@ export function EstadoProyectoDialog({
 
   const handleActionSelect = (action: string) => {
     console.log("Acción seleccionada:", action, "Proyecto:", proyecto.numeroProyecto)
+
+    // Si es iniciar y hay callback de validación, verificar primero
+    if (action === "iniciar" && onIniciarProyecto) {
+      const puedeIniciarse = onIniciarProyecto(proyecto)
+      if (!puedeIniciarse) {
+        // La validación falló, cerrar el dialog y mostrar la pantalla de advertencia
+        onOpenChange(false)
+        return
+      }
+    }
 
     // Si es finalizar y hay callback de validación, verificar primero
     if (action === "finalizar" && onFinalizarProyecto) {
@@ -172,12 +184,22 @@ export function EstadoProyectoDialog({
     if (!selectedAction) return
 
     const newEstado = getNewEstado(selectedAction)
+
+    // Calcular fecha de inicio de postulaciones
+    let fechaInicioPostulaciones = proyecto.fechaInicioPostulaciones
+    if (selectedAction === "iniciar") {
+      // Para todos los proyectos, calcular fecha de inicio 1 mes antes del cierre
+      const fechaCierre = new Date(proyecto.fechaCierrePostulaciones)
+      const fechaInicio = new Date(fechaCierre)
+      fechaInicio.setMonth(fechaInicio.getMonth() - 1)
+      fechaInicioPostulaciones = fechaInicio.toISOString().split("T")[0]
+    }
+
     const updatedProyecto = {
       ...proyecto,
       nombreEstadoProyecto: newEstado.nombre,
       codEstadoProyecto: newEstado.codigo,
-      fechaInicioPostulaciones:
-        selectedAction === "iniciar" ? new Date().toISOString().split("T")[0] : proyecto.fechaInicioPostulaciones,
+      fechaInicioPostulaciones: fechaInicioPostulaciones,
     }
 
     onSave(updatedProyecto)

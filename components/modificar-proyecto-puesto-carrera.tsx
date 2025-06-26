@@ -42,13 +42,8 @@ export function ModificarProyectoPuestoCarrera({ carrera, onSave, onCancel }: Mo
   const validateForm = () => {
     const newErrors: string[] = []
 
-    // Validar campos requeridos
-    if (
-      !formData.codigoPPC.trim() ||
-      !formData.materiasAprobadas.trim() ||
-      !formData.materiasRegulares.trim() ||
-      !formData.planEstudios.trim()
-    ) {
+    // Validar campos requeridos (solo los editables)
+    if (!formData.materiasAprobadas.trim() || !formData.materiasRegulares.trim()) {
       newErrors.push("Los datos ingresados son incorrectos. Intente nuevamente")
     }
 
@@ -226,6 +221,8 @@ export function ModificarProyectoPuestoCarrera({ carrera, onSave, onCancel }: Mo
                     placeholder="Ingresar código PPC"
                     value={formData.codigoPPC}
                     onChange={(e) => setFormData({ ...formData, codigoPPC: e.target.value })}
+                    disabled={true}
+                    className="bg-gray-100 text-gray-500"
                   />
                 </div>
 
@@ -268,6 +265,8 @@ export function ModificarProyectoPuestoCarrera({ carrera, onSave, onCancel }: Mo
                     placeholder="Ingresar año del plan de estudios"
                     value={formData.planEstudios}
                     onChange={(e) => setFormData({ ...formData, planEstudios: e.target.value })}
+                    disabled={true}
+                    className="bg-gray-100 text-gray-500"
                   />
                 </div>
               </div>

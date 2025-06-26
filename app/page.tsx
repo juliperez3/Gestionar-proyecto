@@ -403,19 +403,6 @@ export default function GestionarProyectos() {
   const handleChangeEstado = (proyecto: Proyecto) => {
     console.log("Cambiando estado del proyecto:", proyecto.numeroProyecto)
 
-    // Si es el proyecto 8 (Sistema de Gestión Hospitalaria) y se intenta iniciar, verificar puestos
-    if (proyecto.numeroProyecto === 8 && proyecto.nombreEstadoProyecto === "Creado") {
-      const puestosActivos = checkProyectoPuestos(proyecto.numeroProyecto)
-      console.log("Puestos activos encontrados:", puestosActivos.length)
-
-      if (puestosActivos.length === 0) {
-        console.log("No hay puestos, mostrando advertencia")
-        setSelectedProyecto(proyecto)
-        setShowNoPuestosWarning(true)
-        return
-      }
-    }
-
     // Siempre abrir el dialog de estado
     setSelectedProyecto(proyecto)
     setShowEstadoDialog(true)
@@ -488,6 +475,7 @@ export default function GestionarProyectos() {
       }
     }
 
+    // El proyecto 1 (Sistema de Gestión Académica) puede iniciarse sin restricciones
     return true // Indica que se puede iniciar
   }
 
@@ -638,6 +626,7 @@ export default function GestionarProyectos() {
             setShowEstadoDialog(false)
           }}
           onFinalizarProyecto={handleFinalizarProyecto}
+          onIniciarProyecto={handleIniciarProyecto}
         />
 
         <ProyectoPuestoDialog open={showPuestoDialog} onOpenChange={setShowPuestoDialog} proyecto={selectedProyecto} />
