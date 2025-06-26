@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,7 +33,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { AlertTriangle } from "lucide-react"
-import type { ProyectoPuesto } from "@/types/proyecto-puesto" // Import ProyectoPuesto type
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("es-ES", {
@@ -55,6 +54,18 @@ interface Proyecto {
   nombreUniversidad: string
   nombreEstadoProyecto: string
   codEstadoProyecto: string
+}
+
+interface ProyectoPuesto {
+  codPP: number
+  cantidadVacantes: number
+  cantidadSuPostulaciones: number
+  horasDedicadas: number
+  fechaBajaProyectoPuesto?: string
+  puesto: {
+    codPuesto: string
+    nombrePuesto: string
+  }
 }
 
 const mockProyectos: Proyecto[] = [
@@ -249,7 +260,8 @@ function NoPuestosWarningScreen({
             <Alert className="mb-6">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Para iniciar un proyecto es necesario que tenga al menos un puesto asignado.
+                Para iniciar un proyecto es necesario que tenga al menos un puesto asignado. Los estudiantes necesitan
+                puestos disponibles para poder postularse.
               </AlertDescription>
             </Alert>
 
@@ -321,39 +333,19 @@ export default function GestionarProyectos() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Cargar proyectos desde localStorage y combinar con mock data
   const [proyectos, setProyectos] = useState<Proyecto[]>(() => {
-    if (typeof window === "undefined") return mockProyectos
-
-    // Cargar proyectos guardados desde localStorage
-    const proyectosGuardados = localStorage.getItem("proyectosCreados")
-    const proyectosCreados = proyectosGuardados ? JSON.parse(proyectosGuardados) : []
-
-    // Verificar si hay un nuevo proyecto en los parámetros de URL
     const nuevoProyectoParam = searchParams?.get("nuevoProyecto")
     if (nuevoProyectoParam) {
       try {
         const nuevoProyecto = JSON.parse(decodeURIComponent(nuevoProyectoParam))
-        // Verificar si ya existe en los proyectos guardados
-        const yaExiste = proyectosCreados.some((p: Proyecto) => p.numeroProyecto === nuevoProyecto.numeroProyecto)
-        if (!yaExiste) {
-          proyectosCreados.push(nuevoProyecto)
-          localStorage.setItem("proyectosCreados", JSON.stringify(proyectosCreados))
-        }
+        return [nuevoProyecto, ...mockProyectos]
       } catch (error) {
         console.error("Error parsing nuevo proyecto:", error)
+        return mockProyectos
       }
     }
-
-    // Combinar proyectos creados con mock data, evitando duplicados
-    const todosLosProyectos = [...proyectosCreados, ...mockProyectos]
-    const proyectosUnicos = todosLosProyectos.filter(
-      (proyecto, index, self) => index === self.findIndex((p) => p.numeroProyecto === proyecto.numeroProyecto),
-    )
-
-    return proyectosUnicos
+    return mockProyectos
   })
-
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedProyecto, setSelectedProyecto] = useState<Proyecto | null>(null)
   const [showEstadoDialog, setShowEstadoDialog] = useState(false)
@@ -362,21 +354,6 @@ export default function GestionarProyectos() {
   const [showWarningDialog, setShowWarningDialog] = useState(false)
   const [showNoPuestosWarning, setShowNoPuestosWarning] = useState(false)
   const [showNoContratosWarning, setShowNoContratosWarning] = useState(false)
-
-  // Actualizar proyectos cuando cambie localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const proyectosGuardados = localStorage.getItem("proyectosCreados")
-      const proyectosCreados = proyectosGuardados ? JSON.parse(proyectosGuardados) : []
-
-      const todosLosProyectos = [...proyectosCreados, ...mockProyectos]
-      const proyectosUnicos = todosLosProyectos.filter(
-        (proyecto, index, self) => index === self.findIndex((p) => p.numeroProyecto === proyecto.numeroProyecto),
-      )
-
-      setProyectos(proyectosUnicos)
-    }
-  }, [])
 
   const filteredProyectos = proyectos.filter(
     (proyecto) =>
@@ -414,7 +391,7 @@ export default function GestionarProyectos() {
   const handleEditProject = (proyectoId: number) => {
     const proyecto = proyectos.find((p) => p.numeroProyecto === proyectoId)
     if (proyecto) {
-      const estadosNoEditables = ["En evaluación", "Suspendido", "Cancelado", "Finalizado"]
+      const estadosNoEditables = ["En evaluación", "Cancelado", "Finalizado"]
       if (estadosNoEditables.includes(proyecto.nombreEstadoProyecto)) {
         setShowWarningDialog(true)
         return
@@ -425,7 +402,8 @@ export default function GestionarProyectos() {
 
   const handleChangeEstado = (proyecto: Proyecto) => {
     console.log("Cambiando estado del proyecto:", proyecto.numeroProyecto)
-    // Siempre mostrar el dialog de cambio de estado primero
+
+    // Siempre abrir el dialog de estado
     setSelectedProyecto(proyecto)
     setShowEstadoDialog(true)
   }
@@ -460,26 +438,6 @@ export default function GestionarProyectos() {
     setSelectedProyecto(null)
   }
 
-  // Función para verificar puestos cuando se intenta iniciar un proyecto
-  const handleIniciarProyecto = (proyecto: Proyecto) => {
-    console.log("Intentando iniciar proyecto:", proyecto.numeroProyecto)
-
-    // Si es el proyecto 8 (Sistema de Gestión Hospitalaria), verificar puestos
-    if (proyecto.numeroProyecto === 8) {
-      const puestosActivos = checkProyectoPuestos(proyecto.numeroProyecto)
-      console.log("Puestos activos encontrados:", puestosActivos.length)
-
-      if (puestosActivos.length === 0) {
-        console.log("No hay puestos, mostrando advertencia")
-        setSelectedProyecto(proyecto)
-        setShowNoPuestosWarning(true)
-        return false // Indica que no se puede iniciar
-      }
-    }
-
-    return true // Indica que se puede iniciar
-  }
-
   // Función para manejar cuando se intenta finalizar un proyecto
   const handleFinalizarProyecto = (proyecto: Proyecto) => {
     console.log("Intentando finalizar proyecto:", proyecto.numeroProyecto)
@@ -500,28 +458,24 @@ export default function GestionarProyectos() {
     return true // Indica que se puede finalizar
   }
 
-  // Función para actualizar un proyecto en la lista
-  const handleUpdateProyecto = (proyectoActualizado: Proyecto) => {
-    setProyectos(
-      proyectos.map((p) => (p.numeroProyecto === proyectoActualizado.numeroProyecto ? proyectoActualizado : p)),
-    )
+  // Función para verificar puestos cuando se intenta iniciar un proyecto
+  const handleIniciarProyecto = (proyecto: Proyecto) => {
+    console.log("Intentando iniciar proyecto:", proyecto.numeroProyecto)
 
-    // También actualizar en localStorage si es un proyecto creado
-    if (typeof window !== "undefined") {
-      const proyectosGuardados = localStorage.getItem("proyectosCreados")
-      if (proyectosGuardados) {
-        const proyectosCreados = JSON.parse(proyectosGuardados)
-        const index = proyectosCreados.findIndex(
-          (p: Proyecto) => p.numeroProyecto === proyectoActualizado.numeroProyecto,
-        )
-        if (index >= 0) {
-          proyectosCreados[index] = proyectoActualizado
-          localStorage.setItem("proyectosCreados", JSON.stringify(proyectosCreados))
-        }
+    // Si es el proyecto 8 (Sistema de Gestión Hospitalaria), verificar puestos
+    if (proyecto.numeroProyecto === 8) {
+      const puestosActivos = checkProyectoPuestos(proyecto.numeroProyecto)
+      console.log("Puestos activos encontrados:", puestosActivos.length)
+
+      if (puestosActivos.length === 0) {
+        console.log("No hay puestos, mostrando advertencia")
+        setSelectedProyecto(proyecto)
+        setShowNoPuestosWarning(true)
+        return false // Indica que no se puede iniciar
       }
     }
 
-    setShowEstadoDialog(false)
+    return true // Indica que se puede iniciar
   }
 
   // Si se muestra la advertencia de no puestos, renderizar pantalla completa
@@ -662,39 +616,14 @@ export default function GestionarProyectos() {
           </Card>
         )}
 
-        {/* Ejemplos de Prueba */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-8">
-          <h3 className="text-base font-semibold text-blue-900 mb-4">Ejemplos de Prueba</h3>
-          <ul className="space-y-2 text-blue-800 text-sm">
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-1">•</span>
-              <span>
-                Seleccione modificar estado del proyecto Sistema de Gestión Hospitalaria y luego "Iniciar Proyecto" para
-                simular proyectos sin puestos asignados.
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-1">•</span>
-              <span>
-                Seleccione modificar estado del proyecto Plataforma de Análisis de Datos y luego "Finalizar Proyecto"
-                para simular contratos no existentes.
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-1">•</span>
-              <span>
-                Seleccione modificar estado del proyecto Plataforma E-Learning y luego "Finalizar Proyecto" para simular
-                fecha de cierre no válida.
-              </span>
-            </li>
-          </ul>
-        </div>
-
         <EstadoProyectoDialog
           open={showEstadoDialog}
           onOpenChange={setShowEstadoDialog}
           proyecto={selectedProyecto}
-          onSave={handleUpdateProyecto}
+          onSave={(proyecto) => {
+            setProyectos(proyectos.map((p) => (p.numeroProyecto === proyecto.numeroProyecto ? proyecto : p)))
+            setShowEstadoDialog(false)
+          }}
           onFinalizarProyecto={handleFinalizarProyecto}
           onIniciarProyecto={handleIniciarProyecto}
         />
@@ -707,17 +636,44 @@ export default function GestionarProyectos() {
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-500" />
-                Modificación no disponible
+                Modificacion no disponible
               </AlertDialogTitle>
+              <AlertDialogDescription>
+                No se pueden realizar cambios para el estado actual del proyecto.
+              </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogDescription>
-              No se pueden realizar cambios para el estado actual del proyecto.
-            </AlertDialogDescription>
             <AlertDialogFooter>
               <AlertDialogAction onClick={() => setShowWarningDialog(false)}>Cerrar</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        {/* Ejemplos de Prueba - Information Box */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-8">
+          <h3 className="text-base font-semibold text-blue-900 mb-4">Ejemplos de Prueba</h3>
+          <ul className="space-y-2 text-sm text-blue-800">
+            <li className="flex items-start">
+              <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+              <span>
+                Seleccione modificar estado del proyecto Sistema de Gestión Hospitalaria y luego "Iniciar Proyecto" para
+                simular proyectos sin puestos asignados.
+              </span>
+            </li>
+            <li className="flex items-start">
+              <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+              <span>
+                Seleccione modificar estado del proyecto Plataforma de Análisis de Datos y luego "Finalizar Proyecto"
+                para simular contratos no existentes.
+              </span>
+            </li>
+            <li className="flex items-start">
+              <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+              <span>
+                Seleccione modificar estado del proyecto Plataforma E-Learning y luego "Finalizar Proyecto" para simular
+                fecha de cierre no válida.
+              </span>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   )

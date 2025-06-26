@@ -34,7 +34,7 @@ export function ModificarProyectoPuestoCarrera({ carrera, onSave, onCancel }: Mo
     codigoPPC: carrera.codPPC.toString(),
     materiasAprobadas: carrera.materiasAprobadas.toString(),
     materiasRegulares: carrera.materiasRegulares.toString(),
-    planEstudios: carrera.planEstudios.toString().padStart(4, "0"), // Mostrar con ceros a la izquierda
+    planEstudios: carrera.planEstudios.toString(),
   })
   const [errors, setErrors] = useState<string[]>([])
   const [showConfirmation, setShowConfirmation] = useState(false)
@@ -160,7 +160,7 @@ export function ModificarProyectoPuestoCarrera({ carrera, onSave, onCancel }: Mo
                       <Clock className="h-4 w-4 text-gray-500 mr-2" />
                       <span className="text-sm text-gray-600">Plan de Estudios</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">PE{formData.planEstudios.padStart(4, "0")}</p>
+                    <p className="text-2xl font-bold text-gray-900">{formData.planEstudios}</p>
                   </div>
                 </div>
               </div>

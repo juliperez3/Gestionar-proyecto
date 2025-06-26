@@ -114,58 +114,24 @@ const mockProyectoPuestoCarreras: ProyectoPuestoCarrera[] = [
   },
 ]
 
-// Función para obtener todos los proyectos (mock + localStorage)
-const getAllProyectos = (): Proyecto[] => {
-  if (typeof window === "undefined") return mockProyectos
-
-  const proyectosGuardados = localStorage.getItem("proyectosCreados")
-  const proyectosCreados = proyectosGuardados ? JSON.parse(proyectosGuardados) : []
-
-  const todosLosProyectos = [...proyectosCreados, ...mockProyectos]
-  const proyectosUnicos = todosLosProyectos.filter(
-    (proyecto, index, self) => index === self.findIndex((p) => p.numeroProyecto === proyecto.numeroProyecto),
-  )
-
-  return proyectosUnicos
-}
-
 export default function GestionProyectoPuestoCarreraPage() {
   const router = useRouter()
   const params = useParams()
   const proyectoId = Number.parseInt(params?.id as string)
 
-  // Buscar el proyecto en todos los proyectos disponibles
-  const [proyecto, setProyecto] = useState<Proyecto | null>(() => {
-    const todosLosProyectos = getAllProyectos()
-    return todosLosProyectos.find((p) => p.numeroProyecto === proyectoId) || null
-  })
-
   const [proyectoPuestoCarreras, setProyectoPuestoCarreras] = useState<ProyectoPuestoCarrera[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(`proyectoPuestoCarreras_${proyectoId}`)
       if (saved) {
-        const parsed = JSON.parse(saved)
-        // Asegurar que planEstudios se guarde como número
-        return parsed.map((item: ProyectoPuestoCarrera) => ({
-          ...item,
-          planEstudios: Number(item.planEstudios),
-        }))
+        return JSON.parse(saved)
       }
     }
-    // Solo los proyectos mock específicos tienen datos iniciales
-    if (proyectoId === 1) {
-      return mockProyectoPuestoCarreras
+    // Si es el proyecto Sistema de Gestión Hospitalaria (ID: 8), iniciar con array vacío
+    if (proyectoId === 8) {
+      return []
     }
-    // Todos los demás proyectos (incluyendo los creados) empiezan vacíos
-    return []
+    return mockProyectoPuestoCarreras
   })
-
-  // Actualizar proyecto cuando cambie localStorage
-  useEffect(() => {
-    const todosLosProyectos = getAllProyectos()
-    const proyectoEncontrado = todosLosProyectos.find((p) => p.numeroProyecto === proyectoId)
-    setProyecto(proyectoEncontrado || null)
-  }, [proyectoId])
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -179,6 +145,9 @@ export default function GestionProyectoPuestoCarreraPage() {
   const [showAltaProyectoPuestoCarrera, setShowAltaProyectoPuestoCarrera] = useState(false)
   const [showModificarProyectoPuestoCarrera, setShowModificarProyectoPuestoCarrera] = useState(false)
   const [showBajaProyectoPuestoCarrera, setShowBajaProyectoPuestoCarrera] = useState(false)
+
+  // Buscar el proyecto
+  const proyecto = mockProyectos.find((p) => p.numeroProyecto === proyectoId)
 
   // Filtrar carreras activas (sin fecha de baja)
   const carrerasActivas = proyectoPuestoCarreras.filter((carrera) => !carrera.fechaBajaProyectoPuestoCarrera)
@@ -235,7 +204,6 @@ export default function GestionProyectoPuestoCarreraPage() {
     const newCarrera = {
       ...carreraData,
       codPPC: proyectoPuestoCarreras.length + 1,
-      planEstudios: Number(carreraData.planEstudios),
     }
     setProyectoPuestoCarreras([...proyectoPuestoCarreras, newCarrera])
     setShowAltaProyectoPuestoCarrera(false)
@@ -250,11 +218,7 @@ export default function GestionProyectoPuestoCarreraPage() {
 
   const handleSaveModificarCarrera = (carreraModificada: ProyectoPuestoCarrera) => {
     setProyectoPuestoCarreras(
-      proyectoPuestoCarreras.map((c) =>
-        c.codPPC === carreraModificada.codPPC
-          ? { ...carreraModificada, planEstudios: Number(carreraModificada.planEstudios) }
-          : c,
-      ),
+      proyectoPuestoCarreras.map((c) => (c.codPPC === carreraModificada.codPPC ? carreraModificada : c)),
     )
     setShowModificarProyectoPuestoCarrera(false)
     setSelectedCarrera(null)
@@ -449,8 +413,11 @@ export default function GestionProyectoPuestoCarreraPage() {
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="flex items-center gap-2">{carrera.carrera.nombreCarrera}</CardTitle>
-                        <p className="text-muted-foreground text-sm mt-1">Puesto {carrera.puesto.codPuesto}</p>
+                        <CardTitle className="flex items-center gap-2">
+                          {carrera.carrera.nombreCarrera}
+                          <Badge variant="outline">{carrera.carrera.codCarrera}</Badge>
+                        </CardTitle>
+                        <p className="text-muted-foreground text-sm mt-1">Puesto: {carrera.puesto.nombrePuesto}</p>
                       </div>
                     </div>
                   </CardHeader>

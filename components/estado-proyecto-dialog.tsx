@@ -34,7 +34,6 @@ interface EstadoProyectoDialogProps {
   proyecto: Proyecto | null
   onSave: (proyecto: Proyecto) => void
   onFinalizarProyecto?: (proyecto: Proyecto) => boolean
-  onIniciarProyecto?: (proyecto: Proyecto) => boolean
 }
 
 const getAvailableActions = (estado: string) => {
@@ -144,7 +143,6 @@ export function EstadoProyectoDialog({
   proyecto,
   onSave,
   onFinalizarProyecto,
-  onIniciarProyecto,
 }: EstadoProyectoDialogProps) {
   const [selectedAction, setSelectedAction] = useState<string | null>(null)
   const [showConfirmation, setShowConfirmation] = useState(false)
@@ -155,16 +153,6 @@ export function EstadoProyectoDialog({
 
   const handleActionSelect = (action: string) => {
     console.log("Acción seleccionada:", action, "Proyecto:", proyecto.numeroProyecto)
-
-    // Si es iniciar y hay callback de validación, verificar primero
-    if (action === "iniciar" && onIniciarProyecto) {
-      const puedeIniciarse = onIniciarProyecto(proyecto)
-      if (!puedeIniciarse) {
-        // La validación falló, cerrar el dialog y mostrar la pantalla de advertencia
-        onOpenChange(false)
-        return
-      }
-    }
 
     // Si es finalizar y hay callback de validación, verificar primero
     if (action === "finalizar" && onFinalizarProyecto) {

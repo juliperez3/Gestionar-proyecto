@@ -21,8 +21,6 @@ interface Proyecto {
   nombreUniversidad: string
   nombreEstadoProyecto: string
   codEstadoProyecto: string
-  cuitEmpresa?: string
-  cuitUniversidad?: string
 }
 
 // Mock data para empresas y universidades con sus CUITs
@@ -87,22 +85,59 @@ const mockProyectos: Proyecto[] = [
     nombreEstadoProyecto: "Iniciado",
     codEstadoProyecto: "EST002",
   },
+  {
+    numeroProyecto: 3,
+    nombreProyecto: "Plataforma de Análisis de Datos",
+    descripcionProyecto: "Sistema de análisis y visualización de datos empresariales",
+    fechaInicioPostulaciones: "2024-12-28",
+    fechaCierrePostulaciones: "2025-02-28",
+    fechaInicioActividades: "2025-03-28",
+    fechaFinProyecto: "2025-10-30",
+    nombreEmpresa: "DataTech Inc",
+    nombreUniversidad: "Universidad de Congreso",
+    nombreEstadoProyecto: "En evaluación",
+    codEstadoProyecto: "EST003",
+  },
+  {
+    numeroProyecto: 2,
+    nombreProyecto: "App Mobile E-commerce",
+    descripcionProyecto: "Aplicación móvil para comercio electrónico",
+    fechaInicioPostulaciones: "2024-11-01",
+    fechaCierrePostulaciones: "2025-03-01",
+    fechaInicioActividades: "2025-04-01",
+    fechaFinProyecto: "2025-11-30",
+    nombreEmpresa: "Digital Solutions",
+    nombreUniversidad: "Universidad Champagnat",
+    nombreEstadoProyecto: "Suspendido",
+    codEstadoProyecto: "EST004",
+  },
+  {
+    numeroProyecto: 5,
+    nombreProyecto: "Portal de Servicios Ciudadanos",
+    descripcionProyecto: "Plataforma web para trámites y servicios municipales online",
+    fechaInicioPostulaciones: "2024-09-15",
+    fechaCierrePostulaciones: "2024-11-15",
+    fechaInicioActividades: "2024-12-15",
+    fechaFinProyecto: "2025-06-30",
+    nombreEmpresa: "Software Factory",
+    nombreUniversidad: "Universidad del Aconcagua",
+    nombreEstadoProyecto: "Cancelado",
+    codEstadoProyecto: "EST005",
+  },
+  {
+    numeroProyecto: 4,
+    nombreProyecto: "Sistema de Inventario Inteligente",
+    descripcionProyecto: "Desarrollo de sistema automatizado para gestión de inventarios con IA",
+    fechaInicioPostulaciones: "2024-08-01",
+    fechaCierrePostulaciones: "2024-10-01",
+    fechaInicioActividades: "2024-11-01",
+    fechaFinProyecto: "2024-12-20",
+    nombreEmpresa: "Innovation Labs",
+    nombreUniversidad: "Universidad de Mendoza",
+    nombreEstadoProyecto: "Finalizado",
+    codEstadoProyecto: "EST006",
+  },
 ]
-
-// Función para obtener todos los proyectos (mock + localStorage)
-const getAllProyectos = (): Proyecto[] => {
-  if (typeof window === "undefined") return mockProyectos
-
-  const proyectosGuardados = localStorage.getItem("proyectosCreados")
-  const proyectosCreados = proyectosGuardados ? JSON.parse(proyectosGuardados) : []
-
-  const todosLosProyectos = [...proyectosCreados, ...mockProyectos]
-  const proyectosUnicos = todosLosProyectos.filter(
-    (proyecto, index, self) => index === self.findIndex((p) => p.numeroProyecto === proyecto.numeroProyecto),
-  )
-
-  return proyectosUnicos
-}
 
 export default function EditarProyecto() {
   const router = useRouter()
@@ -111,29 +146,17 @@ export default function EditarProyecto() {
 
   const [proyecto, setProyecto] = useState<Proyecto | null>(() => {
     // Initialize proyecto immediately
-    const todosLosProyectos = getAllProyectos()
-    return todosLosProyectos.find((p) => p.numeroProyecto === proyectoId) || null
+    return mockProyectos.find((p) => p.numeroProyecto === proyectoId) || null
   })
 
   const [isLoading, setIsLoading] = useState(false)
   const [originalData, setOriginalData] = useState<any>(null)
   const [formData, setFormData] = useState(() => {
-    const todosLosProyectos = getAllProyectos()
-    const proyectoEncontrado = todosLosProyectos.find((p) => p.numeroProyecto === proyectoId)
+    // Initialize formData immediately
+    const proyectoEncontrado = mockProyectos.find((p) => p.numeroProyecto === proyectoId)
     if (proyectoEncontrado) {
-      // Primero intentar usar los CUITs guardados directamente en el proyecto
-      let cuitEmpresa = proyectoEncontrado.cuitEmpresa || ""
-      let cuitUniversidad = proyectoEncontrado.cuitUniversidad || ""
-
-      // Si no están guardados, buscar por nombre (fallback)
-      if (!cuitEmpresa) {
-        const empresa = mockEmpresas.find((e) => e.nombre === proyectoEncontrado.nombreEmpresa)
-        cuitEmpresa = empresa?.cuit || ""
-      }
-      if (!cuitUniversidad) {
-        const universidad = mockUniversidades.find((u) => u.nombre === proyectoEncontrado.nombreUniversidad)
-        cuitUniversidad = universidad?.cuit || ""
-      }
+      const empresa = mockEmpresas.find((e) => e.nombre === proyectoEncontrado.nombreEmpresa)
+      const universidad = mockUniversidades.find((u) => u.nombre === proyectoEncontrado.nombreUniversidad)
 
       return {
         nombreProyecto: proyectoEncontrado.nombreProyecto,
@@ -141,8 +164,8 @@ export default function EditarProyecto() {
         fechaCierrePostulaciones: proyectoEncontrado.fechaCierrePostulaciones,
         fechaInicioActividades: proyectoEncontrado.fechaInicioActividades,
         fechaFinProyecto: proyectoEncontrado.fechaFinProyecto,
-        cuitEmpresa: cuitEmpresa,
-        cuitUniversidad: cuitUniversidad,
+        cuitEmpresa: empresa?.cuit || "",
+        cuitUniversidad: universidad?.cuit || "",
       }
     }
     return {
@@ -165,19 +188,8 @@ export default function EditarProyecto() {
   // Set originalData on mount
   useEffect(() => {
     if (proyecto && !originalData) {
-      // Primero intentar usar los CUITs guardados directamente en el proyecto
-      let cuitEmpresa = proyecto.cuitEmpresa || ""
-      let cuitUniversidad = proyecto.cuitUniversidad || ""
-
-      // Si no están guardados, buscar por nombre (fallback)
-      if (!cuitEmpresa) {
-        const empresa = mockEmpresas.find((e) => e.nombre === proyecto.nombreEmpresa)
-        cuitEmpresa = empresa?.cuit || ""
-      }
-      if (!cuitUniversidad) {
-        const universidad = mockUniversidades.find((e) => e.nombre === proyecto.nombreUniversidad)
-        cuitUniversidad = universidad?.cuit || ""
-      }
+      const empresa = mockEmpresas.find((e) => e.nombre === proyecto.nombreEmpresa)
+      const universidad = mockUniversidades.find((u) => u.nombre === proyecto.nombreUniversidad)
 
       const initialData = {
         nombreProyecto: proyecto.nombreProyecto,
@@ -185,8 +197,8 @@ export default function EditarProyecto() {
         fechaCierrePostulaciones: proyecto.fechaCierrePostulaciones,
         fechaInicioActividades: proyecto.fechaInicioActividades,
         fechaFinProyecto: proyecto.fechaFinProyecto,
-        cuitEmpresa: cuitEmpresa,
-        cuitUniversidad: cuitUniversidad,
+        cuitEmpresa: empresa?.cuit || "",
+        cuitUniversidad: universidad?.cuit || "",
       }
 
       setOriginalData(initialData)
@@ -253,10 +265,7 @@ export default function EditarProyecto() {
       return numbers
     } else if (numbers.length <= 10) {
       return `${numbers.slice(0, 2)}-${numbers.slice(2)}`
-    } else if (numbers.length === 11) {
-      return `${numbers.slice(0, 2)}-${numbers.slice(2, 10)}-${numbers.slice(10, 11)}`
     } else {
-      // Si hay más de 11 números, truncar
       return `${numbers.slice(0, 2)}-${numbers.slice(2, 10)}-${numbers.slice(10, 11)}`
     }
   }
@@ -295,9 +304,8 @@ export default function EditarProyecto() {
     }
 
     // Validar nombre de proyecto duplicado (excluyendo el proyecto actual)
-    const todosLosProyectos = getAllProyectos()
     const nombreDuplicado =
-      todosLosProyectos.some(
+      mockProyectos.some(
         (p) =>
           p.nombreProyecto.toLowerCase() === formData.nombreProyecto.toLowerCase() && p.numeroProyecto !== proyectoId,
       ) || formData.nombreProyecto === "TCodeNova"
@@ -378,12 +386,7 @@ export default function EditarProyecto() {
   const handleCuitChange = (value: string, field: "cuitEmpresa" | "cuitUniversidad") => {
     if (!isFieldEditable(field)) return
 
-    // Limpiar y limitar a solo números y guiones
-    const cleaned = value.replace(/[^\d-]/g, "")
-    // Limitar a máximo 13 caracteres (XX-XXXXXXXX-X)
-    const limited = cleaned.slice(0, 13)
-    const formattedValue = formatCUIT(limited)
-
+    const formattedValue = formatCUIT(value)
     setFormData({ ...formData, [field]: formattedValue })
 
     if (fieldErrors[field]) {
@@ -426,30 +429,7 @@ export default function EditarProyecto() {
   }
 
   const handleConfirmarModificacion = () => {
-    // Actualizar el proyecto en localStorage si es un proyecto creado
-    if (typeof window !== "undefined") {
-      const proyectosGuardados = localStorage.getItem("proyectosCreados")
-      if (proyectosGuardados) {
-        const proyectosCreados = JSON.parse(proyectosGuardados)
-        const index = proyectosCreados.findIndex((p: Proyecto) => p.numeroProyecto === proyectoId)
-        if (index >= 0) {
-          // Actualizar el proyecto con los nuevos datos
-          const proyectoActualizado = {
-            ...proyectosCreados[index],
-            nombreProyecto: formData.nombreProyecto,
-            descripcionProyecto: formData.descripcionProyecto,
-            fechaCierrePostulaciones: formData.fechaCierrePostulaciones,
-            fechaInicioActividades: formData.fechaInicioActividades,
-            fechaFinProyecto: formData.fechaFinProyecto,
-            nombreEmpresa: getEmpresaNombre(),
-            nombreUniversidad: getUniversidadNombre(),
-          }
-          proyectosCreados[index] = proyectoActualizado
-          localStorage.setItem("proyectosCreados", JSON.stringify(proyectosCreados))
-        }
-      }
-    }
-
+    // Aquí se guardarían los cambios
     console.log("Proyecto modificado:", { proyecto, formData })
     router.push("/")
   }
