@@ -662,6 +662,34 @@ export default function GestionarProyectos() {
           </Card>
         )}
 
+        {/* Ejemplos de Prueba */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-8">
+          <h3 className="text-base font-semibold text-blue-900 mb-4">Ejemplos de Prueba</h3>
+          <ul className="space-y-2 text-blue-800 text-sm">
+            <li className="flex items-start gap-2">
+              <span className="text-blue-500 mt-1">•</span>
+              <span>
+                Seleccione modificar estado del proyecto Sistema de Gestión Hospitalaria y luego "Iniciar Proyecto" para
+                simular proyectos sin puestos asignados.
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-blue-500 mt-1">•</span>
+              <span>
+                Seleccione modificar estado del proyecto Plataforma de Análisis de Datos y luego "Finalizar Proyecto"
+                para simular contratos no existentes.
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-blue-500 mt-1">•</span>
+              <span>
+                Seleccione modificar estado del proyecto Plataforma E-Learning y luego "Finalizar Proyecto" para simular
+                fecha de cierre no válida.
+              </span>
+            </li>
+          </ul>
+        </div>
+
         <EstadoProyectoDialog
           open={showEstadoDialog}
           onOpenChange={setShowEstadoDialog}
@@ -679,12 +707,12 @@ export default function GestionarProyectos() {
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-500" />
-                Modificacion no disponible
+                Modificación no disponible
               </AlertDialogTitle>
-              <AlertDialogDescription>
-                No se pueden realizar cambios para el estado actual del proyecto.
-              </AlertDialogDescription>
             </AlertDialogHeader>
+            <AlertDialogDescription>
+              No se pueden realizar cambios para el estado actual del proyecto.
+            </AlertDialogDescription>
             <AlertDialogFooter>
               <AlertDialogAction onClick={() => setShowWarningDialog(false)}>Cerrar</AlertDialogAction>
             </AlertDialogFooter>
