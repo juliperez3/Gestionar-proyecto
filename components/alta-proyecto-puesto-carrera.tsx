@@ -11,7 +11,7 @@ interface ProyectoPuestoCarrera {
   codPPC: number
   materiasAprobadas: number
   materiasRegulares: number
-  planEstudios: number
+  planEstudios: string
   fechaBajaProyectoPuestoCarrera?: string
   carrera: {
     codCarrera: string
@@ -60,10 +60,6 @@ export function AltaProyectoPuestoCarrera({ onSave, onCancel, existingCarreras }
       newErrors.push("Las materias regulares no pueden ser negativas")
     }
 
-    if (Number.parseInt(formData.planEstudios) <= 0) {
-      newErrors.push("El plan de estudios debe ser mayor a 0")
-    }
-
     // Simular búsqueda de carrera no encontrada
     if (formData.codCarrera === "C1111") {
       newErrors.push("No se encontró la carrera con el código ingresado")
@@ -85,7 +81,7 @@ export function AltaProyectoPuestoCarrera({ onSave, onCancel, existingCarreras }
         codPPC: 0,
         materiasAprobadas: Number.parseInt(formData.materiasAprobadas),
         materiasRegulares: Number.parseInt(formData.materiasRegulares),
-        planEstudios: Number.parseInt(formData.planEstudios),
+        planEstudios: formData.planEstudios,
         carrera: {
           codCarrera: formData.codCarrera,
           nombreCarrera: `Carrera ${formData.codCarrera}`,

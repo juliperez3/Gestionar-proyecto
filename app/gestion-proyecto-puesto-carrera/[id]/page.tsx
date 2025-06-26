@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Plus, Edit, Trash2, GraduationCap, AlertCircle } from "lucide-react"
+import { ArrowLeft, Edit, Trash2, GraduationCap, AlertCircle } from "lucide-react"
 import { AltaProyectoPuestoCarrera } from "@/components/alta-proyecto-puesto-carrera"
 import { ModificarProyectoPuestoCarrera } from "@/components/modificar-proyecto-puesto-carrera"
 import { BajaProyectoPuestoCarrera } from "@/components/baja-proyecto-puesto-carrera"
@@ -56,6 +56,19 @@ const mockProyectos: Proyecto[] = [
     codEstadoProyecto: "EST001",
   },
   {
+    numeroProyecto: 8,
+    nombreProyecto: "Sistema de Gestión Hospitalaria",
+    descripcionProyecto: "Desarrollo de sistema integral para gestión de pacientes y recursos hospitalarios",
+    fechaInicioPostulaciones: null,
+    fechaCierrePostulaciones: "2025-03-10",
+    fechaInicioActividades: "2025-04-10",
+    fechaFinProyecto: "2025-11-15",
+    nombreEmpresa: "HealthTech Solutions",
+    nombreUniversidad: "Universidad de Cuyo",
+    nombreEstadoProyecto: "Creado",
+    codEstadoProyecto: "EST001",
+  },
+  {
     numeroProyecto: 6,
     nombreProyecto: "Sistema de Recursos Humanos",
     descripcionProyecto: "Plataforma integral para gestión de recursos humanos y nóminas",
@@ -101,20 +114,58 @@ const mockProyectoPuestoCarreras: ProyectoPuestoCarrera[] = [
   },
 ]
 
+// Función para obtener todos los proyectos (mock + localStorage)
+const getAllProyectos = (): Proyecto[] => {
+  if (typeof window === "undefined") return mockProyectos
+
+  const proyectosGuardados = localStorage.getItem("proyectosCreados")
+  const proyectosCreados = proyectosGuardados ? JSON.parse(proyectosGuardados) : []
+
+  const todosLosProyectos = [...proyectosCreados, ...mockProyectos]
+  const proyectosUnicos = todosLosProyectos.filter(
+    (proyecto, index, self) => index === self.findIndex((p) => p.numeroProyecto === proyecto.numeroProyecto),
+  )
+
+  return proyectosUnicos
+}
+
 export default function GestionProyectoPuestoCarreraPage() {
   const router = useRouter()
   const params = useParams()
   const proyectoId = Number.parseInt(params?.id as string)
 
+  // Buscar el proyecto en todos los proyectos disponibles
+  const [proyecto, setProyecto] = useState<Proyecto | null>(() => {
+    const todosLosProyectos = getAllProyectos()
+    return todosLosProyectos.find((p) => p.numeroProyecto === proyectoId) || null
+  })
+
   const [proyectoPuestoCarreras, setProyectoPuestoCarreras] = useState<ProyectoPuestoCarrera[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(`proyectoPuestoCarreras_${proyectoId}`)
       if (saved) {
-        return JSON.parse(saved)
+        const parsed = JSON.parse(saved)
+        // Asegurar que planEstudios se guarde como número
+        return parsed.map((item: ProyectoPuestoCarrera) => ({
+          ...item,
+          planEstudios: Number(item.planEstudios),
+        }))
       }
     }
-    return mockProyectoPuestoCarreras
+    // Solo los proyectos mock específicos tienen datos iniciales
+    if (proyectoId === 1) {
+      return mockProyectoPuestoCarreras
+    }
+    // Todos los demás proyectos (incluyendo los creados) empiezan vacíos
+    return []
   })
+
+  // Actualizar proyecto cuando cambie localStorage
+  useEffect(() => {
+    const todosLosProyectos = getAllProyectos()
+    const proyectoEncontrado = todosLosProyectos.find((p) => p.numeroProyecto === proyectoId)
+    setProyecto(proyectoEncontrado || null)
+  }, [proyectoId])
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -128,9 +179,6 @@ export default function GestionProyectoPuestoCarreraPage() {
   const [showAltaProyectoPuestoCarrera, setShowAltaProyectoPuestoCarrera] = useState(false)
   const [showModificarProyectoPuestoCarrera, setShowModificarProyectoPuestoCarrera] = useState(false)
   const [showBajaProyectoPuestoCarrera, setShowBajaProyectoPuestoCarrera] = useState(false)
-
-  // Buscar el proyecto
-  const proyecto = mockProyectos.find((p) => p.numeroProyecto === proyectoId)
 
   // Filtrar carreras activas (sin fecha de baja)
   const carrerasActivas = proyectoPuestoCarreras.filter((carrera) => !carrera.fechaBajaProyectoPuestoCarrera)
@@ -187,6 +235,7 @@ export default function GestionProyectoPuestoCarreraPage() {
     const newCarrera = {
       ...carreraData,
       codPPC: proyectoPuestoCarreras.length + 1,
+      planEstudios: Number(carreraData.planEstudios),
     }
     setProyectoPuestoCarreras([...proyectoPuestoCarreras, newCarrera])
     setShowAltaProyectoPuestoCarrera(false)
@@ -201,7 +250,11 @@ export default function GestionProyectoPuestoCarreraPage() {
 
   const handleSaveModificarCarrera = (carreraModificada: ProyectoPuestoCarrera) => {
     setProyectoPuestoCarreras(
-      proyectoPuestoCarreras.map((c) => (c.codPPC === carreraModificada.codPPC ? carreraModificada : c)),
+      proyectoPuestoCarreras.map((c) =>
+        c.codPPC === carreraModificada.codPPC
+          ? { ...carreraModificada, planEstudios: Number(carreraModificada.planEstudios) }
+          : c,
+      ),
     )
     setShowModificarProyectoPuestoCarrera(false)
     setSelectedCarrera(null)
@@ -382,16 +435,7 @@ export default function GestionProyectoPuestoCarreraPage() {
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <GraduationCap className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No hay carreras definidas</h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  Agregue carreras para completar la configuración del proyecto
-                </p>
-                {canManage && (
-                  <Button onClick={handleAltaCarrera}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Agregar Primera Carrera
-                  </Button>
-                )}
+                <h3 className="text-lg font-semibold mb-2">No hay requisitos disponibles</h3>
               </CardContent>
             </Card>
           ) : (
@@ -405,11 +449,8 @@ export default function GestionProyectoPuestoCarreraPage() {
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="flex items-center gap-2">
-                          {carrera.carrera.nombreCarrera}
-                          <Badge variant="outline">{carrera.carrera.codCarrera}</Badge>
-                        </CardTitle>
-                        <p className="text-muted-foreground text-sm mt-1">Puesto: {carrera.puesto.nombrePuesto}</p>
+                        <CardTitle className="flex items-center gap-2">{carrera.carrera.nombreCarrera}</CardTitle>
+                        <p className="text-muted-foreground text-sm mt-1">Puesto {carrera.puesto.codPuesto}</p>
                       </div>
                     </div>
                   </CardHeader>

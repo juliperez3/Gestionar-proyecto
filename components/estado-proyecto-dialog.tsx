@@ -33,6 +33,8 @@ interface EstadoProyectoDialogProps {
   onOpenChange: (open: boolean) => void
   proyecto: Proyecto | null
   onSave: (proyecto: Proyecto) => void
+  onFinalizarProyecto?: (proyecto: Proyecto) => boolean
+  onIniciarProyecto?: (proyecto: Proyecto) => boolean
 }
 
 const getAvailableActions = (estado: string) => {
@@ -136,7 +138,14 @@ const getActionMessage = (action: string, nombreProyecto: string) => {
   }
 }
 
-export function EstadoProyectoDialog({ open, onOpenChange, proyecto, onSave }: EstadoProyectoDialogProps) {
+export function EstadoProyectoDialog({
+  open,
+  onOpenChange,
+  proyecto,
+  onSave,
+  onFinalizarProyecto,
+  onIniciarProyecto,
+}: EstadoProyectoDialogProps) {
   const [selectedAction, setSelectedAction] = useState<string | null>(null)
   const [showConfirmation, setShowConfirmation] = useState(false)
 
@@ -145,6 +154,28 @@ export function EstadoProyectoDialog({ open, onOpenChange, proyecto, onSave }: E
   const availableActions = getAvailableActions(proyecto.nombreEstadoProyecto)
 
   const handleActionSelect = (action: string) => {
+    console.log("Acción seleccionada:", action, "Proyecto:", proyecto.numeroProyecto)
+
+    // Si es iniciar y hay callback de validación, verificar primero
+    if (action === "iniciar" && onIniciarProyecto) {
+      const puedeIniciarse = onIniciarProyecto(proyecto)
+      if (!puedeIniciarse) {
+        // La validación falló, cerrar el dialog y mostrar la pantalla de advertencia
+        onOpenChange(false)
+        return
+      }
+    }
+
+    // Si es finalizar y hay callback de validación, verificar primero
+    if (action === "finalizar" && onFinalizarProyecto) {
+      const puedeFinalizarse = onFinalizarProyecto(proyecto)
+      if (!puedeFinalizarse) {
+        // La validación falló, cerrar el dialog y mostrar la pantalla de advertencia
+        onOpenChange(false)
+        return
+      }
+    }
+
     setSelectedAction(action)
     setShowConfirmation(true)
   }

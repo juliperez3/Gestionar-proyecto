@@ -24,20 +24,20 @@ interface ProyectoPuestoCarrera {
 }
 
 interface AltaRequisitosPuestoProps {
-  onSave: (requisito: ProyectoPuestoCarrera) => void
-  onCancel: () => void
   puestoCreado: {
     codPuesto: string
     nombrePuesto: string
   }
+  onSave: (requisito: ProyectoPuestoCarrera) => void
+  onCancel: () => void
 }
 
-export function AltaRequisitosPuesto({ onSave, onCancel, puestoCreado }: AltaRequisitosPuestoProps) {
+export function AltaRequisitosPuesto({ puestoCreado, onSave, onCancel }: AltaRequisitosPuestoProps) {
   const [formData, setFormData] = useState({
-    codCarrera: "",
     materiasAprobadas: "",
     materiasRegulares: "",
     planEstudios: "",
+    codCarrera: "",
   })
   const [errors, setErrors] = useState<string[]>([])
 
@@ -46,29 +46,25 @@ export function AltaRequisitosPuesto({ onSave, onCancel, puestoCreado }: AltaReq
 
     // Validar campos requeridos
     if (
-      !formData.codCarrera.trim() ||
       !formData.materiasAprobadas.trim() ||
       !formData.materiasRegulares.trim() ||
-      !formData.planEstudios.trim()
+      !formData.planEstudios.trim() ||
+      !formData.codCarrera.trim()
     ) {
-      newErrors.push("Los datos ingresados no son válidos. Intente nuevamente")
+      newErrors.push("Los datos ingresados son incorrectos. Intente nuevamente")
     }
 
     // Validar valores numéricos
     if (Number.parseInt(formData.materiasAprobadas) < 0) {
-      newErrors.push("Los datos ingresados no son válidos. Intente nuevamente")
+      newErrors.push("Las materias aprobadas no pueden ser negativas")
     }
 
     if (Number.parseInt(formData.materiasRegulares) < 0) {
-      newErrors.push("Los datos ingresados no son válidos. Intente nuevamente")
-    }
-
-    if (Number.parseInt(formData.planEstudios) <= 0) {
-      newErrors.push("Los datos ingresados no son válidos. Intente nuevamente")
+      newErrors.push("Las materias regulares no pueden ser negativas")
     }
 
     // Simular búsqueda de carrera no encontrada
-    if (formData.codCarrera === "C9999") {
+    if (formData.codCarrera === "C1111") {
       newErrors.push("No se encontró la carrera con el código ingresado")
     }
 
@@ -79,115 +75,108 @@ export function AltaRequisitosPuesto({ onSave, onCancel, puestoCreado }: AltaReq
   const handleSubmit = () => {
     if (validateForm()) {
       const requisitoData: ProyectoPuestoCarrera = {
-        codPPC: 0,
+        codPPC: Date.now(), // ID único temporal
         materiasAprobadas: Number.parseInt(formData.materiasAprobadas),
         materiasRegulares: Number.parseInt(formData.materiasRegulares),
         planEstudios: Number.parseInt(formData.planEstudios),
         carrera: {
           codCarrera: formData.codCarrera,
-          nombreCarrera: getCarreraNombre(formData.codCarrera),
+          nombreCarrera: `Carrera ${formData.codCarrera}`,
         },
-        puesto: puestoCreado,
+        puesto: {
+          codPuesto: puestoCreado.codPuesto,
+          nombrePuesto: puestoCreado.nombrePuesto,
+        },
       }
       onSave(requisitoData)
     }
   }
 
-  const getCarreraNombre = (codigo: string) => {
-    const carreras: { [key: string]: string } = {
-      C0001: "Ingeniería en Sistemas",
-      C0002: "Diseño Gráfico",
-      C0003: "Administración de Empresas",
-      C0004: "Contaduría Pública",
-    }
-    return carreras[codigo] || `Carrera ${codigo}`
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="py-6 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Sistema de Prácticas Profesionales</h1>
-        </div>
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold text-gray-900">Sistema de Prácticas Profesionales</h1>
       </div>
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back button and title */}
         <div className="mb-8">
-          <div className="flex items-center space-x-4 mb-4">
-            <Button variant="outline" onClick={onCancel}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
-            </Button>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Alta ProyectoPuestoCarrera</h2>
-              <p className="text-gray-600 mt-1">
-                Puesto: {puestoCreado.nombrePuesto} ({puestoCreado.codPuesto})
-              </p>
-            </div>
+          <Button variant="outline" onClick={onCancel} className="mb-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Información del Puesto</h2>
+            <p className="text-gray-600 mt-1">Puesto {puestoCreado.codPuesto}</p>
           </div>
         </div>
 
         {/* Form Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Requisitos de Carrera</CardTitle>
-            <CardDescription>Complete los campos requeridos para dar alta los requisitos del puesto</CardDescription>
+            <CardTitle>Datos requeridos para el alta de la carrera</CardTitle>
+            <CardDescription>Ingrese los siguientes datos:</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="codCarrera">
-                  Código Carrera <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="codCarrera"
-                  type="text"
-                  placeholder="Ingresar código de carrera"
-                  value={formData.codCarrera}
-                  onChange={(e) => setFormData({ ...formData, codCarrera: e.target.value })}
-                />
+              {/* Primera columna */}
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="materiasAprobadas">
+                    Materias Aprobadas Requeridas <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="materiasAprobadas"
+                    type="text"
+                    placeholder="Ingresar cantidad de materias aprobadas"
+                    value={formData.materiasAprobadas}
+                    onChange={(e) => setFormData({ ...formData, materiasAprobadas: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="planEstudios">
+                    Código Plan de Estudios <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="planEstudios"
+                    type="text"
+                    placeholder="Ingresar año del plan de estudios"
+                    value={formData.planEstudios}
+                    onChange={(e) => setFormData({ ...formData, planEstudios: e.target.value })}
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="materiasAprobadas">
-                  Materias Aprobadas <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="materiasAprobadas"
-                  type="text"
-                  placeholder="Ingresar cantidad de materias aprobadas"
-                  value={formData.materiasAprobadas}
-                  onChange={(e) => setFormData({ ...formData, materiasAprobadas: e.target.value })}
-                />
-              </div>
+              {/* Segunda columna */}
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="materiasRegulares">
+                    Materias Regulares Requeridas <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="materiasRegulares"
+                    type="text"
+                    placeholder="Ingresar cantidad de materias regulares"
+                    value={formData.materiasRegulares}
+                    onChange={(e) => setFormData({ ...formData, materiasRegulares: e.target.value })}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="materiasRegulares">
-                  Materias Regulares <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="materiasRegulares"
-                  type="text"
-                  placeholder="Ingresar cantidad de materias regulares"
-                  value={formData.materiasRegulares}
-                  onChange={(e) => setFormData({ ...formData, materiasRegulares: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="planEstudios">
-                  Plan de Estudios <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="planEstudios"
-                  type="text"
-                  placeholder="Ingresar código del plan de estudios"
-                  value={formData.planEstudios}
-                  onChange={(e) => setFormData({ ...formData, planEstudios: e.target.value })}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="codCarrera">
+                    Código Carrera <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="codCarrera"
+                    type="text"
+                    placeholder="Ingresar código de la carrera"
+                    value={formData.codCarrera}
+                    onChange={(e) => setFormData({ ...formData, codCarrera: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
 
@@ -224,10 +213,10 @@ export function AltaRequisitosPuesto({ onSave, onCancel, puestoCreado }: AltaReq
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h4 className="text-sm font-bold text-blue-800 mb-2">Ejemplos para prueba:</h4>
               <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Ingrese "C0001", "C0002", "C0003" o "C0004" como código de carrera válido.</li>
-                <li>• Ingrese datos válidos para simular la creación exitosa.</li>
-                <li>• Ingrese "C9999" como código para simular carrera no encontrada.</li>
+                <li>• Ingrese datos válidos para simular la creación de una carrera.</li>
                 <li>• Ingrese datos incompletos para simular datos no válidos.</li>
+                <li>• Ingrese "C1111" como código para simular carrera no encontrada.</li>
+                <li>• Ingrese "PE0001" o "PE0002" para simular que ese plan de estudios no se encuentra.</li>
               </ul>
             </div>
           </CardContent>

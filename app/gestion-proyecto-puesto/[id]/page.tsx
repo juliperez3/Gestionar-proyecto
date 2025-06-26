@@ -69,6 +69,19 @@ const mockProyectos: Proyecto[] = [
     codEstadoProyecto: "EST001",
   },
   {
+    numeroProyecto: 8,
+    nombreProyecto: "Sistema de Gestión Hospitalaria",
+    descripcionProyecto: "Desarrollo de sistema integral para gestión de pacientes y recursos hospitalarios",
+    fechaInicioPostulaciones: null,
+    fechaCierrePostulaciones: "2025-03-10",
+    fechaInicioActividades: "2025-04-10",
+    fechaFinProyecto: "2025-11-15",
+    nombreEmpresa: "HealthTech Solutions",
+    nombreUniversidad: "Universidad de Cuyo",
+    nombreEstadoProyecto: "Creado",
+    codEstadoProyecto: "EST001",
+  },
+  {
     numeroProyecto: 6,
     nombreProyecto: "Sistema de Recursos Humanos",
     descripcionProyecto: "Plataforma integral para gestión de recursos humanos y nóminas",
@@ -106,20 +119,69 @@ const mockProyectoPuestos: ProyectoPuesto[] = [
   },
 ]
 
+// Función para obtener todos los proyectos (mock + localStorage)
+const getAllProyectos = (): Proyecto[] => {
+  if (typeof window === "undefined") return mockProyectos
+
+  const proyectosGuardados = localStorage.getItem("proyectosCreados")
+  const proyectosCreados = proyectosGuardados ? JSON.parse(proyectosGuardados) : []
+
+  const todosLosProyectos = [...proyectosCreados, ...mockProyectos]
+  const proyectosUnicos = todosLosProyectos.filter(
+    (proyecto, index, self) => index === self.findIndex((p) => p.numeroProyecto === proyecto.numeroProyecto),
+  )
+
+  return proyectosUnicos
+}
+
 export default function GestionProyectoPuestoPage() {
   const router = useRouter()
   const params = useParams()
   const proyectoId = Number.parseInt(params?.id as string)
 
+  // Buscar el proyecto en todos los proyectos disponibles
+  const [proyecto, setProyecto] = useState<Proyecto | null>(() => {
+    const todosLosProyectos = getAllProyectos()
+    return todosLosProyectos.find((p) => p.numeroProyecto === proyectoId) || null
+  })
+
   const [proyectoPuestos, setProyectoPuestos] = useState<ProyectoPuesto[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(`proyectoPuestos_${proyectoId}`)
       if (saved) {
-        return JSON.parse(saved)
+        try {
+          const puestos = JSON.parse(saved)
+          // Convertir formato de creación a formato de gestión si es necesario
+          return puestos.map((puesto: any) => {
+            if (puesto.codPuesto && !puesto.puesto) {
+              // Es del formato de creación, convertir
+              return {
+                codPP: puesto.codPP || Date.now(),
+                cantidadVacantes: puesto.cantidadVacantes,
+                cantidadSuPostulaciones: puesto.cantidadMaximaPostulaciones,
+                horasDedicadas: puesto.horasDedicadas,
+                puesto: {
+                  codPuesto: puesto.codPuesto,
+                  nombrePuesto: puesto.nombrePuesto,
+                },
+              }
+            }
+            return puesto
+          })
+        } catch (error) {
+          console.error("Error parsing proyectoPuestos:", error)
+          return []
+        }
       }
     }
+    // Si es el proyecto 8 (Sistema de Gestión Hospitalaria), empezar con array vacío
+    if (proyectoId === 8) {
+      return []
+    }
+    // Para otros proyectos mock, usar los datos mock
     return mockProyectoPuestos
   })
+
   const [selectedPuesto, setSelectedPuesto] = useState<ProyectoPuesto | null>(null)
   const [action, setAction] = useState<"alta" | "modificacion" | "baja" | "requisito" | null>(null)
   const [showActionSelector, setShowActionSelector] = useState(false)
@@ -128,14 +190,18 @@ export default function GestionProyectoPuestoPage() {
   const [showBajaProyectoPuesto, setShowBajaProyectoPuesto] = useState(false)
   const [showAltaRequisitos, setShowAltaRequisitos] = useState(false)
 
+  // Actualizar proyecto cuando cambie localStorage
+  useEffect(() => {
+    const todosLosProyectos = getAllProyectos()
+    const proyectoEncontrado = todosLosProyectos.find((p) => p.numeroProyecto === proyectoId)
+    setProyecto(proyectoEncontrado || null)
+  }, [proyectoId])
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem(`proyectoPuestos_${proyectoId}`, JSON.stringify(proyectoPuestos))
     }
   }, [proyectoPuestos, proyectoId])
-
-  // Buscar el proyecto
-  const proyecto = mockProyectos.find((p) => p.numeroProyecto === proyectoId)
 
   // Filtrar puestos activos (sin fecha de baja)
   const puestosActivos = proyectoPuestos.filter((puesto) => !puesto.fechaBajaProyectoPuesto)
@@ -417,7 +483,7 @@ export default function GestionProyectoPuestoPage() {
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Briefcase className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No hay puestos definidos</h3>
+                <h3 className="text-lg font-semibold mb-2">No hay Puestos disponibles</h3>
                 <p className="text-muted-foreground text-center mb-4">
                   Agregue puestos para completar la configuración del proyecto
                 </p>
