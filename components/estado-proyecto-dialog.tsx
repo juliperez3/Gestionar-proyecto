@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, Play, Pause, CheckCircle, X } from "lucide-react"
+import { AlertCircle, Play, Pause, X } from "lucide-react"
 
 interface Proyecto {
   numeroProyecto: number
@@ -71,12 +71,6 @@ const getAvailableActions = (estado: string) => {
       ]
     case "En evaluación":
       return [
-        {
-          action: "finalizar",
-          label: "Finalizar Proyecto",
-          icon: <CheckCircle className="h-4 w-4" />,
-          variant: "default" as const,
-        },
         {
           action: "cancelar",
           label: "Cancelar Proyecto",

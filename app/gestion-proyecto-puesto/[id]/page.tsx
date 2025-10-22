@@ -6,11 +6,19 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Plus, Edit, Trash2, Briefcase, AlertCircle, BookOpen } from "lucide-react"
-import { AltaProyectoPuesto } from "@/components/alta-proyecto-puesto"
-import { ModificarProyectoPuesto } from "@/components/modificar-proyecto-puesto"
-import { BajaProyectoPuesto } from "@/components/baja-proyecto-puesto"
-import { AltaRequisitosPuesto } from "@/components/alta-requisitos-puesto"
+import { ArrowLeft, Plus, Edit, Trash2, Briefcase, AlertCircle, BookOpen, AlertTriangle, Calendar } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface Proyecto {
   numeroProyecto: number
@@ -36,6 +44,7 @@ interface ProyectoPuesto {
     codPuesto: string
     nombrePuesto: string
   }
+  contPostulaciones?: number // Added for special handling
 }
 
 interface ProyectoPuestoCarrera {
@@ -94,6 +103,19 @@ const mockProyectos: Proyecto[] = [
     nombreEstadoProyecto: "Iniciado",
     codEstadoProyecto: "EST002",
   },
+  {
+    numeroProyecto: 7,
+    nombreProyecto: "Proyecto Suspendido",
+    descripcionProyecto: "Proyecto suspendido debido a insuficientes postulaciones",
+    fechaInicioPostulaciones: null,
+    fechaCierrePostulaciones: "2025-01-15",
+    fechaInicioActividades: "2025-02-15",
+    fechaFinProyecto: "2025-08-15",
+    nombreEmpresa: "Suspended Inc.",
+    nombreUniversidad: "Universidad de Suspendido",
+    nombreEstadoProyecto: "Suspendido",
+    codEstadoProyecto: "EST003",
+  },
 ]
 
 const mockProyectoPuestos: ProyectoPuesto[] = [
@@ -119,6 +141,20 @@ const mockProyectoPuestos: ProyectoPuesto[] = [
   },
 ]
 
+const mockProyectoPuestosProyecto7: ProyectoPuesto[] = [
+  {
+    codPP: 1,
+    cantidadVacantes: 5,
+    cantidadSuPostulaciones: 10,
+    horasDedicadas: 20,
+    contPostulaciones: 2, // Postulaciones insuficientes
+    puesto: {
+      codPuesto: "P0002",
+      nombrePuesto: "Analista de Sistemas",
+    },
+  },
+]
+
 export default function GestionProyectoPuestoPage() {
   const router = useRouter()
   const params = useParams()
@@ -131,13 +167,15 @@ export default function GestionProyectoPuestoPage() {
         return JSON.parse(saved)
       }
     }
-    // Si es el proyecto 8 (Sistema de Gestión Hospitalaria), empezar con array vacío
+    if (proyectoId === 7) {
+      return mockProyectoPuestosProyecto7
+    }
     if (proyectoId === 8) {
       return []
     }
-    // Para otros proyectos, usar los datos mock
     return mockProyectoPuestos
   })
+
   const [selectedPuesto, setSelectedPuesto] = useState<ProyectoPuesto | null>(null)
   const [action, setAction] = useState<"alta" | "modificacion" | "baja" | "requisito" | null>(null)
   const [showActionSelector, setShowActionSelector] = useState(false)
@@ -145,6 +183,16 @@ export default function GestionProyectoPuestoPage() {
   const [showModificarProyectoPuesto, setShowModificarProyectoPuesto] = useState(false)
   const [showBajaProyectoPuesto, setShowBajaProyectoPuesto] = useState(false)
   const [showAltaRequisitos, setShowAltaRequisitos] = useState(false)
+  const [showSuspendidoOptions, setShowSuspendidoOptions] = useState(false)
+  const [selectedSuspendidoPuesto, setSelectedSuspendidoPuesto] = useState<ProyectoPuesto | null>(null)
+  const [showModificarVacantesDialog, setShowModificarVacantesDialog] = useState(false)
+  const [showModificarFechasDialog, setShowModificarFechasDialog] = useState(false)
+  const [showBajaExitosaDialog, setShowBajaExitosaDialog] = useState(false)
+  const [showBajaErrorDialog, setShowBajaErrorDialog] = useState(false)
+  const [fechaCierrePostulaciones, setFechaCierrePostulaciones] = useState("")
+  const [fechaInicioActividades, setFechaInicioActividades] = useState("")
+  const [fechaFinActividades, setFechaFinActividades] = useState("")
+  const [fechaError, setFechaError] = useState("")
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -152,10 +200,8 @@ export default function GestionProyectoPuestoPage() {
     }
   }, [proyectoPuestos, proyectoId])
 
-  // Buscar el proyecto
   const proyecto = mockProyectos.find((p) => p.numeroProyecto === proyectoId)
 
-  // Filtrar puestos activos (sin fecha de baja)
   const puestosActivos = proyectoPuestos.filter((puesto) => !puesto.fechaBajaProyectoPuesto)
 
   if (!proyecto) {
@@ -180,8 +226,14 @@ export default function GestionProyectoPuestoPage() {
   }
 
   const canManage = proyecto.nombreEstadoProyecto === "Creado"
+  const isSuspendidoWithSpecialFeatures = proyecto.nombreEstadoProyecto === "Suspendido" && proyectoId === 7
 
   const handleSelectPuesto = (puesto: ProyectoPuesto) => {
+    if (isSuspendidoWithSpecialFeatures) {
+      setSelectedSuspendidoPuesto(puesto)
+      setShowSuspendidoOptions(true)
+      return
+    }
     setSelectedPuesto(puesto)
     setShowActionSelector(true)
   }
@@ -239,7 +291,6 @@ export default function GestionProyectoPuestoPage() {
   }
 
   const handleSaveBajaPuesto = (puestoConBaja: ProyectoPuesto) => {
-    // Establecer la fecha actual al dar de baja
     const fechaActual = new Date().toLocaleDateString("es-ES", {
       day: "2-digit",
       month: "2-digit",
@@ -265,7 +316,6 @@ export default function GestionProyectoPuestoPage() {
   }
 
   const handleSaveRequisito = (requisitoData: ProyectoPuestoCarrera) => {
-    // Aquí podrías guardar el requisito en un estado global o localStorage
     console.log("Requisito creado exitosamente:", requisitoData)
     setShowAltaRequisitos(false)
     setSelectedPuesto(null)
@@ -278,50 +328,161 @@ export default function GestionProyectoPuestoPage() {
     setAction(null)
   }
 
-  // Pantalla completa de Alta Proyecto Puesto
-  if (showAltaProyectoPuesto) {
+  const handleDarDeBajaPuestoSuspendido = () => {
+    if (!selectedSuspendidoPuesto) return
+
+    const contPostulaciones = (selectedSuspendidoPuesto as any).contPostulaciones || 0
+
+    if (contPostulaciones === 0) {
+      const fechaActual = new Date().toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+
+      const puestoConBaja = {
+        ...selectedSuspendidoPuesto,
+        fechaBajaProyectoPuesto: fechaActual,
+      }
+
+      setProyectoPuestos(proyectoPuestos.map((p) => (p.codPP === puestoConBaja.codPP ? puestoConBaja : p)))
+      setShowSuspendidoOptions(false)
+      setShowBajaExitosaDialog(true)
+    } else {
+      setShowSuspendidoOptions(false)
+      setShowBajaErrorDialog(true)
+    }
+  }
+
+  const handleModificarProyectoPuestoSuspendido = () => {
+    setShowSuspendidoOptions(false)
+    setShowModificarVacantesDialog(true)
+  }
+
+  const handleConfirmarModificarVacantes = () => {
+    if (!selectedSuspendidoPuesto) return
+
+    const contPostulaciones = (selectedSuspendidoPuesto as any).contPostulaciones || 0
+
+    const puestoModificado = {
+      ...selectedSuspendidoPuesto,
+      cantidadVacantes: contPostulaciones,
+    }
+
+    setProyectoPuestos(proyectoPuestos.map((p) => (p.codPP === puestoModificado.codPP ? puestoModificado : p)))
+    console.log("Proyecto cambiado a estado 'En evaluación'")
+    setShowModificarVacantesDialog(false)
+    setSelectedSuspendidoPuesto(null)
+    router.push("/")
+  }
+
+  const handleModificarFechasProyecto = () => {
+    setShowSuspendidoOptions(false)
+    setShowModificarFechasDialog(true)
+  }
+
+  const handleConfirmarModificarFechas = () => {
+    setFechaError("")
+
+    if (!fechaCierrePostulaciones || !fechaInicioActividades || !fechaFinActividades) {
+      setFechaError("Todos los campos son obligatorios")
+      return
+    }
+
+    const fechaCierre = new Date(fechaCierrePostulaciones)
+    const fechaInicio = new Date(fechaInicioActividades)
+    const fechaFin = new Date(fechaFinActividades)
+
+    const fechaCierreMasUnMes = new Date(fechaCierre)
+    fechaCierreMasUnMes.setMonth(fechaCierreMasUnMes.getMonth() + 1)
+
+    if (fechaCierreMasUnMes > fechaInicio) {
+      setFechaError(
+        "La fecha de cierre de postulaciones + 1 mes debe ser menor o igual a la fecha de inicio de actividades",
+      )
+      return
+    }
+
+    if (fechaInicio >= fechaFin) {
+      setFechaError("La fecha de inicio de actividades debe ser menor a la fecha de fin de actividades")
+      return
+    }
+
+    console.log("Fechas modificadas exitosamente")
+    setShowModificarFechasDialog(false)
+    setSelectedSuspendidoPuesto(null)
+    router.push("/")
+  }
+
+  if (showSuspendidoOptions && selectedSuspendidoPuesto) {
+    const contPostulaciones = (selectedSuspendidoPuesto as any).contPostulaciones || 0
+
     return (
-      <AltaProyectoPuesto
-        onSave={handleSaveAltaPuesto}
-        onCancel={handleCancelAltaPuesto}
-        existingPuestos={puestosActivos}
-      />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900">Sistema de Prácticas Profesionales</h1>
+        </div>
+
+        <div className="container mx-auto p-6 max-w-md">
+          <div className="flex items-center gap-4 mb-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setShowSuspendidoOptions(false)
+                setSelectedSuspendidoPuesto(null)
+              }}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Seleccionar Acción</CardTitle>
+              <p className="text-muted-foreground">Puesto: {selectedSuspendidoPuesto.puesto.nombrePuesto}</p>
+              <Alert className="mt-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>⚠️ Postulaciones insuficientes</AlertDescription>
+              </Alert>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-transparent"
+                    onClick={handleDarDeBajaPuestoSuspendido}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Dar de baja puesto
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-transparent"
+                    onClick={handleModificarProyectoPuestoSuspendido}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Modificar ProyectoPuesto
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-transparent"
+                    onClick={handleModificarFechasProyecto}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Modificar fechas proyecto
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     )
   }
 
-  // Pantalla completa de Modificar Proyecto Puesto
-  if (showModificarProyectoPuesto && selectedPuesto) {
-    return (
-      <ModificarProyectoPuesto
-        puesto={selectedPuesto}
-        onSave={handleSaveModificarPuesto}
-        onCancel={handleCancelModificarPuesto}
-      />
-    )
-  }
-
-  // Pantalla completa de Baja Proyecto Puesto
-  if (showBajaProyectoPuesto && selectedPuesto) {
-    return (
-      <BajaProyectoPuesto puesto={selectedPuesto} onSave={handleSaveBajaPuesto} onCancel={handleCancelBajaPuesto} />
-    )
-  }
-
-  // Pantalla completa de Alta Requisitos
-  if (showAltaRequisitos && selectedPuesto) {
-    return (
-      <AltaRequisitosPuesto
-        puestoCreado={{
-          codPuesto: selectedPuesto.puesto.codPuesto,
-          nombrePuesto: selectedPuesto.puesto.nombrePuesto,
-        }}
-        onSave={handleSaveRequisito}
-        onCancel={handleCancelRequisito}
-      />
-    )
-  }
-
-  // Selector de acción
   if (showActionSelector && selectedPuesto) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
@@ -354,23 +515,35 @@ export default function GestionProyectoPuestoPage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="grid gap-2">
-                  <Button variant="outline" className="justify-start" onClick={() => handleSelectAction("alta")}>
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-transparent"
+                    onClick={() => handleSelectAction("alta")}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Alta - Agregar nuevo puesto
                   </Button>
                   <Button
                     variant="outline"
-                    className="justify-start"
+                    className="justify-start bg-transparent"
                     onClick={() => handleSelectAction("modificacion")}
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Modificación - Editar puesto seleccionado
                   </Button>
-                  <Button variant="outline" className="justify-start" onClick={() => handleSelectAction("baja")}>
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-transparent"
+                    onClick={() => handleSelectAction("baja")}
+                  >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Baja - Eliminar puesto seleccionado
                   </Button>
-                  <Button variant="outline" className="justify-start" onClick={() => handleSelectAction("requisito")}>
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-transparent"
+                    onClick={() => handleSelectAction("requisito")}
+                  >
                     <BookOpen className="h-4 w-4 mr-2" />
                     Alta - Agregar nuevo Requisito del Puesto
                   </Button>
@@ -383,7 +556,6 @@ export default function GestionProyectoPuestoPage() {
     )
   }
 
-  // Pantalla principal de gestión
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
       <div className="text-center mb-8">
@@ -415,7 +587,7 @@ export default function GestionProyectoPuestoPage() {
         </div>
 
         <div className="space-y-4">
-          {!canManage && (
+          {!canManage && !isSuspendidoWithSpecialFeatures && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>Solo se pueden gestionar puestos en proyectos con estado "Creado"</AlertDescription>
@@ -427,6 +599,15 @@ export default function GestionProyectoPuestoPage() {
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Haga clic en un puesto para seleccionar la acción a realizar (Alta-Modificación-Baja-Requisitos)
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isSuspendidoWithSpecialFeatures && puestosActivos.length > 0 && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Haga clic en un puesto para ver las opciones disponibles para proyectos suspendidos
               </AlertDescription>
             </Alert>
           )}
@@ -452,8 +633,8 @@ export default function GestionProyectoPuestoPage() {
               {puestosActivos.map((puesto) => (
                 <Card
                   key={puesto.codPP}
-                  className={`cursor-pointer transition-colors ${canManage ? "hover:bg-muted/50" : ""}`}
-                  onClick={() => canManage && handleSelectPuesto(puesto)}
+                  className={`cursor-pointer transition-colors ${canManage || isSuspendidoWithSpecialFeatures ? "hover:bg-muted/50" : ""}`}
+                  onClick={() => (canManage || isSuspendidoWithSpecialFeatures) && handleSelectPuesto(puesto)}
                 >
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -461,6 +642,12 @@ export default function GestionProyectoPuestoPage() {
                         <CardTitle className="flex items-center gap-2">
                           {puesto.puesto.nombrePuesto}
                           <Badge variant="outline">{puesto.puesto.codPuesto}</Badge>
+                          {isSuspendidoWithSpecialFeatures && (puesto as any).contPostulaciones !== undefined && (
+                            <Badge variant="destructive" className="ml-2">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Postulaciones insuficientes
+                            </Badge>
+                          )}
                         </CardTitle>
                       </div>
                     </div>
@@ -491,6 +678,130 @@ export default function GestionProyectoPuestoPage() {
           )}
         </div>
       </div>
+
+      <AlertDialog open={showBajaExitosaDialog} onOpenChange={setShowBajaExitosaDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Puesto dado de baja</AlertDialogTitle>
+            <AlertDialogDescription>Puesto dado de baja con éxito.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowBajaExitosaDialog(false)
+                setSelectedSuspendidoPuesto(null)
+                router.push("/")
+              }}
+            >
+              Aceptar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showBajaErrorDialog} onOpenChange={setShowBajaErrorDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>No se puede dar de baja</AlertDialogTitle>
+            <AlertDialogDescription>No se puede dar de baja al ProyectoPuesto con postulaciones</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowBajaErrorDialog(false)
+                setSelectedSuspendidoPuesto(null)
+                router.push("/")
+              }}
+            >
+              Aceptar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showModificarVacantesDialog} onOpenChange={setShowModificarVacantesDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Modificar cantidad de vacantes</AlertDialogTitle>
+            <AlertDialogDescription>
+              La cantidad de postulaciones es {(selectedSuspendidoPuesto as any)?.contPostulaciones || 0}. ¿Desea
+              modificar la cantidad de vacantes a la cantidad de postulaciones?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowModificarVacantesDialog(false)
+                setSelectedSuspendidoPuesto(null)
+                router.push("/")
+              }}
+            >
+              NO
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmarModificarVacantes}>SI</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showModificarFechasDialog} onOpenChange={setShowModificarFechasDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Modificar fechas del proyecto</AlertDialogTitle>
+            <AlertDialogDescription>Ingrese las nuevas fechas para el proyecto</AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="fechaCierre">Fecha de Cierre de Postulaciones</Label>
+              <Input
+                id="fechaCierre"
+                type="date"
+                value={fechaCierrePostulaciones}
+                onChange={(e) => setFechaCierrePostulaciones(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fechaInicio">Fecha de Inicio de Actividades</Label>
+              <Input
+                id="fechaInicio"
+                type="date"
+                value={fechaInicioActividades}
+                onChange={(e) => setFechaInicioActividades(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fechaFin">Fecha de Fin de Actividades</Label>
+              <Input
+                id="fechaFin"
+                type="date"
+                value={fechaFinActividades}
+                onChange={(e) => setFechaFinActividades(e.target.value)}
+              />
+            </div>
+            {fechaError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{fechaError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowModificarFechasDialog(false)
+                setSelectedSuspendidoPuesto(null)
+                setFechaError("")
+                setFechaCierrePostulaciones("")
+                setFechaInicioActividades("")
+                setFechaFinActividades("")
+                router.push("/")
+              }}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmarModificarFechas}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

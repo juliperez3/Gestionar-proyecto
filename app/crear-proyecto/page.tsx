@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   ArrowLeft,
   X,
@@ -47,11 +48,46 @@ const mockEmpresas = [
 ]
 
 const mockUniversidades = [
-  { cuit: "30-12345678-9", nombre: "Universidad Tecnológica Nacional" },
-  { cuit: "30-87654321-0", nombre: "Universidad de Cuyo" },
-  { cuit: "30-11111111-1", nombre: "Universidad Congreso" },
-  { cuit: "30-22222222-2", nombre: "Universidad del Sur" },
-  { cuit: "30-33333333-3", nombre: "Universidad Privada" },
+  {
+    cuitUniversidad: "30-12345678-9",
+    nombreUniversidad: "Universidad Tecnológica Nacional",
+    direccionUniversidad: "Av. Medrano 951, CABA",
+    correoUniversidad: "info@utn.edu.ar",
+    codigoPostal: "C1179AAQ",
+    nroTelefono: "011-4867-7500",
+  },
+  {
+    cuitUniversidad: "30-87654321-0",
+    nombreUniversidad: "Universidad de Cuyo",
+    direccionUniversidad: "Centro Universitario, Mendoza",
+    correoUniversidad: "info@uncuyo.edu.ar",
+    codigoPostal: "M5502JMA",
+    nroTelefono: "0261-413-5000",
+  },
+  {
+    cuitUniversidad: "30-11111111-1",
+    nombreUniversidad: "Universidad de Congreso",
+    direccionUniversidad: "Colón 90, Mendoza",
+    correoUniversidad: "info@ucongreso.edu.ar",
+    codigoPostal: "M5500",
+    nroTelefono: "0261-423-0630",
+  },
+  {
+    cuitUniversidad: "30-22222222-2",
+    nombreUniversidad: "Universidad de Mendoza",
+    direccionUniversidad: "Boulogne Sur Mer 683, Mendoza",
+    correoUniversidad: "info@um.edu.ar",
+    codigoPostal: "M5500",
+    nroTelefono: "0261-420-1376",
+  },
+  {
+    cuitUniversidad: "30-33333333-3",
+    nombreUniversidad: "Universidad Champagnat",
+    direccionUniversidad: "Av. Mitre 1960, Mendoza",
+    correoUniversidad: "info@uch.edu.ar",
+    codigoPostal: "M5500",
+    nroTelefono: "0261-420-5600",
+  },
 ]
 
 const mockProyectosExistentes: Proyecto[] = [
@@ -92,7 +128,6 @@ export default function CrearProyecto() {
     fechaInicioActividades: "",
     fechaFinProyecto: "",
     cuitEmpresa: "",
-    cuitUniversidad: "",
   })
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({})
   const [generalErrors, setGeneralErrors] = useState<string[]>([])
@@ -157,6 +192,10 @@ export default function CrearProyecto() {
   const [showAgregarMasRequisitos, setShowAgregarMasRequisitos] = useState(false)
   // NUEVO: Estado para la pantalla de agregar más puestos
   const [showAgregarMasPuestos, setShowAgregarMasPuestos] = useState(false)
+
+  // NUEVO: Added state for university selection
+  const [selectedUniversidades, setSelectedUniversidades] = useState<string[]>([])
+  const [showUniversidadSelection, setShowUniversidadSelection] = useState(false)
 
   // Auto-hide errors after 5 seconds
   useEffect(() => {
@@ -226,9 +265,7 @@ export default function CrearProyecto() {
       !formData.fechaCierrePostulaciones ||
       !formData.fechaFinProyecto ||
       !formData.cuitEmpresa.trim() ||
-      !formData.cuitUniversidad.trim() ||
-      !validateCUIT(formData.cuitEmpresa) ||
-      !validateCUIT(formData.cuitUniversidad)
+      !validateCUIT(formData.cuitEmpresa)
     ) {
       newGeneralErrors.push("Los datos ingresados son incorrectos. Intente nuevamente")
       setGeneralErrors(newGeneralErrors)
@@ -244,10 +281,7 @@ export default function CrearProyecto() {
       newFieldErrors.cuitEmpresa = "La empresa para la que ingresó el código no existe. Intente nuevamente."
     }
 
-    // CUIT universidad específico
-    if (formData.cuitUniversidad === "22-22222222-2") {
-      newFieldErrors.cuitUniversidad = "La universidad para la que ingresó el código no existe. Intente nuevamente."
-    }
+    // CUIT universidad específico (ahora se valida en la pantalla de selección de universidades)
 
     // Nombre de proyecto específico
     if (formData.nombreProyecto === "TCodeNova") {
@@ -404,7 +438,7 @@ export default function CrearProyecto() {
   }
 
   const handleFinalConfirm = () => {
-    // Aquí normalmente guardarías el proyecto
+    // Aquí normally guardarías el proyecto
     console.log("Proyecto creado:", formData)
     router.push("/")
   }
@@ -427,11 +461,14 @@ export default function CrearProyecto() {
   }
 
   const getUniversidadNombre = () => {
-    const universidad = mockUniversidades.find((u) => u.cuit === formData.cuitUniversidad)
-    return universidad ? universidad.nombre : "Nombre Universidad"
+    // This function might not be directly used now as we select multiple universities
+    // but keeping it for potential future use or if only one university is ever selected.
+    // For the current implementation, the selection is managed by `selectedUniversidades` state.
+    const universidad = mockUniversidades.find((u) => u.cuitUniversidad === selectedUniversidades[0]) // Assuming first selected for display
+    return universidad ? universidad.nombreUniversidad : "Nombre Universidad"
   }
 
-  const handleCuitChange = (value: string, field: "cuitEmpresa" | "cuitUniversidad") => {
+  const handleCuitChange = (value: string, field: "cuitEmpresa") => {
     const formattedValue = formatCUIT(value)
     setFormData({ ...formData, [field]: formattedValue })
 
@@ -500,7 +537,7 @@ export default function CrearProyecto() {
   }
 
   // Función específica para campos CUIT con focus
-  const handleCuitFocus = (field: "cuitEmpresa" | "cuitUniversidad") => {
+  const handleCuitFocus = (field: "cuitEmpresa") => {
     // Si el campo tiene error, limpiar su contenido cuando se hace focus
     if (fieldErrors[field]) {
       setFormData({ ...formData, [field]: "" })
@@ -617,7 +654,7 @@ export default function CrearProyecto() {
         fechaInicioActividades: formData.fechaInicioActividades,
         fechaFinProyecto: formData.fechaFinProyecto,
         nombreEmpresa: getEmpresaNombre(),
-        nombreUniversidad: getUniversidadNombre(),
+        nombreUniversidad: getUniversidadNombre(), // This will use the first selected university
         nombreEstadoProyecto: "Creado",
         codEstadoProyecto: "EST001",
       }
@@ -626,6 +663,7 @@ export default function CrearProyecto() {
         formData,
         nuevoProyecto,
         puestosCreados,
+        universidadesSeleccionadas: selectedUniversidades,
       })
 
       // Redirigir a la pantalla principal
@@ -642,6 +680,27 @@ export default function CrearProyecto() {
       C0005: "Ingeniería Industrial",
     }
     return carreras[codigo] || `Carrera ${codigo}`
+  }
+
+  // Handler for university toggle
+  const handleUniversidadToggle = (cuit: string) => {
+    setSelectedUniversidades((prev) => (prev.includes(cuit) ? prev.filter((item) => item !== cuit) : [...prev, cuit]))
+  }
+
+  // Handler for university confirmation
+  const handleUniversidadConfirm = () => {
+    if (selectedUniversidades.length === 0) {
+      alert("Debe seleccionar al menos una universidad")
+      return
+    }
+    setShowUniversidadSelection(false)
+    setShowPositionConfirmation(true) // Show position confirmation
+  }
+
+  // Handler for project confirmation - shows university selection
+  const handleConfirmProject = () => {
+    setShowProjectSummary(false)
+    setShowUniversidadSelection(true) // Show university selection (CA°28)
   }
 
   // NUEVA PANTALLA: ¿Desea agregar más puestos?
@@ -805,8 +864,12 @@ export default function CrearProyecto() {
                     <GraduationCap className="h-6 w-6 text-green-600" />
                     <div>
                       <p className="font-medium text-gray-700">Universidad</p>
-                      <p className="text-sm text-gray-600">{getUniversidadNombre()}</p>
-                      <p className="text-xs text-gray-500">CUIT: {formData.cuitUniversidad}</p>
+                      {/* Displaying the first selected university for now */}
+                      <p className="text-sm text-gray-600">
+                        {mockUniversidades.find((u) => u.cuitUniversidad === selectedUniversidades[0])
+                          ?.nombreUniversidad || "Ninguna seleccionada"}
+                      </p>
+                      <p className="text-xs text-gray-500">CUIT: {selectedUniversidades[0] || "N/A"}</p>
                     </div>
                   </div>
                 </div>
@@ -848,14 +911,7 @@ export default function CrearProyecto() {
                   <Button variant="outline" onClick={() => router.push("/")}>
                     Cancelar
                   </Button>
-                  <Button
-                    onClick={() => {
-                      setShowProjectSummary(false)
-                      setShowPositionConfirmation(true) // Mostrar confirmación de posición
-                    }}
-                    size="lg"
-                    className="px-8"
-                  >
+                  <Button onClick={handleConfirmProject} size="lg" className="px-8">
                     Confirmar
                   </Button>
                 </div>
@@ -884,7 +940,7 @@ export default function CrearProyecto() {
                 size="sm"
                 onClick={() => {
                   setShowPositionConfirmation(false)
-                  setShowProjectSummary(true)
+                  setShowProjectSummary(true) // Volver a la confirmación del proyecto
                 }}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -937,7 +993,9 @@ export default function CrearProyecto() {
                 size="sm"
                 onClick={() => {
                   setShowPuestoForm(false)
-                  // Volver al formulario principal del proyecto
+                  // Volver al formulario principal del proyecto (o a la pantalla anterior, dependiendo del flujo)
+                  // For now, let's assume we go back to the project summary, and then university selection
+                  setShowProjectSummary(true)
                 }}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -1518,6 +1576,76 @@ export default function CrearProyecto() {
     )
   }
 
+  // NEW SCREEN: University Selection (CA°28)
+  if (showUniversidadSelection) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900">Sistema de Prácticas Profesionales</h1>
+        </div>
+        <div className="container mx-auto p-6 max-w-6xl">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowUniversidadSelection(false)
+                  setShowProjectSummary(true) // Go back to project summary
+                }}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver
+              </Button>
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Seleccione la/s Universidad/es</CardTitle>
+              <CardDescription>Seleccione una o más universidades a las que va a asignar el proyecto</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {mockUniversidades.map((universidad) => (
+                <div
+                  key={universidad.cuitUniversidad}
+                  className="flex items-start space-x-4 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleUniversidadToggle(universidad.cuitUniversidad)}
+                >
+                  <Checkbox
+                    checked={selectedUniversidades.includes(universidad.cuitUniversidad)}
+                    onCheckedChange={() => handleUniversidadToggle(universidad.cuitUniversidad)}
+                  />
+                  <div className="flex-1 grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="font-medium text-gray-900">{universidad.nombreUniversidad}</p>
+                      <p className="text-sm text-gray-600">CUIT: {universidad.cuitUniversidad}</p>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <p>{universidad.direccionUniversidad}</p>
+                      <p>CP: {universidad.codigoPostal}</p>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <p>{universidad.correoUniversidad}</p>
+                      <p>Tel: {universidad.nroTelefono}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex gap-4 justify-end pt-4">
+                <Button variant="outline" onClick={() => router.push("/")}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleUniversidadConfirm}>Confirmar</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
       {/* Sistema title - appears on all screens */}
@@ -1595,20 +1723,7 @@ export default function CrearProyecto() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="cuitUniversidad">
-                CUIT Universidad <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="cuitUniversidad"
-                value={formData.cuitUniversidad}
-                onChange={(e) => handleCuitChange(e.target.value, "cuitUniversidad")}
-                onFocus={() => handleCuitFocus("cuitUniversidad")}
-                placeholder="XX-XXXXXXXX-X"
-                maxLength={13}
-                className={`h-12 ${showErrors && fieldErrors.cuitUniversidad ? "border-red-500" : ""}`}
-              />
-            </div>
+            {/* CUIT Universidad field removed */}
 
             {/* Fechas */}
             <div className="space-y-4">
@@ -1699,7 +1814,7 @@ export default function CrearProyecto() {
 
             {/* Botones de acción - centrados y mismo tamaño */}
             <div className="flex gap-4 justify-center mt-6 mb-4">
-              <Button variant="outline" onClick={handleCancel} size="lg" className="w-40">
+              <Button variant="outline" onClick={handleCancel} size="lg" className="w-40 bg-transparent">
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>
@@ -1737,10 +1852,6 @@ export default function CrearProyecto() {
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
                     <span>Ingrese "11-11111111-1" para simular empresa no encontrada.</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="mr-2">•</span>
-                    <span>Ingrese "22-22222222-2" para simular universidad no encontrada.</span>
                   </li>
                   <li className="flex items-start">
                     <span className="mr-2">•</span>

@@ -51,7 +51,7 @@ interface Proyecto {
   fechaInicioActividades: string
   fechaFinProyecto: string
   nombreEmpresa: string
-  nombreUniversidad: string
+  universidades: string[] // Array of universidad names
   nombreEstadoProyecto: string
   codEstadoProyecto: string
 }
@@ -78,7 +78,7 @@ const mockProyectos: Proyecto[] = [
     fechaInicioActividades: "2025-03-15",
     fechaFinProyecto: "2025-12-15",
     nombreEmpresa: "TechCorp SA",
-    nombreUniversidad: "Universidad Tecnológica Nacional",
+    universidades: ["Universidad Tecnológica Nacional", "Universidad de Cuyo"],
     nombreEstadoProyecto: "Creado",
     codEstadoProyecto: "EST001",
   },
@@ -91,7 +91,7 @@ const mockProyectos: Proyecto[] = [
     fechaInicioActividades: "2025-04-10",
     fechaFinProyecto: "2025-11-15",
     nombreEmpresa: "HealthTech Solutions",
-    nombreUniversidad: "Universidad de Cuyo",
+    universidades: ["Universidad de Cuyo"],
     nombreEstadoProyecto: "Creado",
     codEstadoProyecto: "EST001",
   },
@@ -104,7 +104,7 @@ const mockProyectos: Proyecto[] = [
     fechaInicioActividades: "2025-02-28",
     fechaFinProyecto: "2025-09-30",
     nombreEmpresa: "HR Solutions",
-    nombreUniversidad: "Universidad de Congreso",
+    universidades: ["Universidad de Congreso"],
     nombreEstadoProyecto: "Iniciado",
     codEstadoProyecto: "EST002",
   },
@@ -117,7 +117,7 @@ const mockProyectos: Proyecto[] = [
     fechaInicioActividades: "2025-03-28",
     fechaFinProyecto: "2025-10-30",
     nombreEmpresa: "DataTech Inc",
-    nombreUniversidad: "Universidad de Cuyo",
+    universidades: ["Universidad de Cuyo"],
     nombreEstadoProyecto: "En evaluación",
     codEstadoProyecto: "EST003",
   },
@@ -130,7 +130,7 @@ const mockProyectos: Proyecto[] = [
     fechaInicioActividades: "2025-02-15",
     fechaFinProyecto: "2025-08-30",
     nombreEmpresa: "EduTech Solutions",
-    nombreUniversidad: "Universidad de Mendoza",
+    universidades: ["Universidad de Mendoza"],
     nombreEstadoProyecto: "En evaluación",
     codEstadoProyecto: "EST003",
   },
@@ -143,7 +143,20 @@ const mockProyectos: Proyecto[] = [
     fechaInicioActividades: "2025-04-01",
     fechaFinProyecto: "2025-11-30",
     nombreEmpresa: "Digital Solutions",
-    nombreUniversidad: "Universidad Champagnat",
+    universidades: ["Universidad Champagnat"],
+    nombreEstadoProyecto: "Suspendido",
+    codEstadoProyecto: "EST004",
+  },
+  {
+    numeroProyecto: 7,
+    nombreProyecto: "Sistema de Gestión de Inventarios",
+    descripcionProyecto: "Sistema para control y gestión de inventarios con alertas automáticas",
+    fechaInicioPostulaciones: "2024-10-15",
+    fechaCierrePostulaciones: "2025-02-20",
+    fechaInicioActividades: "2025-03-20",
+    fechaFinProyecto: "2025-10-30",
+    nombreEmpresa: "Logistics Pro",
+    universidades: ["Universidad del Aconcagua"],
     nombreEstadoProyecto: "Suspendido",
     codEstadoProyecto: "EST004",
   },
@@ -156,7 +169,7 @@ const mockProyectos: Proyecto[] = [
     fechaInicioActividades: "2024-12-15",
     fechaFinProyecto: "2025-06-30",
     nombreEmpresa: "Software Factory",
-    nombreUniversidad: "Universidad del Aconcagua",
+    universidades: ["Universidad del Aconcagua"],
     nombreEstadoProyecto: "Cancelado",
     codEstadoProyecto: "EST005",
   },
@@ -169,7 +182,7 @@ const mockProyectos: Proyecto[] = [
     fechaInicioActividades: "2024-11-01",
     fechaFinProyecto: "2024-12-20",
     nombreEmpresa: "Innovation Labs",
-    nombreUniversidad: "Universidad de Mendoza",
+    universidades: ["Universidad de Mendoza"],
     nombreEstadoProyecto: "Finalizado",
     codEstadoProyecto: "EST006",
   },
@@ -354,30 +367,27 @@ export default function GestionarProyectos() {
   const [showWarningDialog, setShowWarningDialog] = useState(false)
   const [showNoPuestosWarning, setShowNoPuestosWarning] = useState(false)
   const [showNoContratosWarning, setShowNoContratosWarning] = useState(false)
+  const [showOperationDialog, setShowOperationDialog] = useState(false)
 
   const filteredProyectos = proyectos.filter(
     (proyecto) =>
       proyecto.nombreProyecto.toLowerCase().includes(searchTerm.toLowerCase()) ||
       proyecto.nombreEmpresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      proyecto.nombreUniversidad.toLowerCase().includes(searchTerm.toLowerCase()),
+      (proyecto.universidades || []).some((uni) => uni.toLowerCase().includes(searchTerm.toLowerCase())),
   )
 
-  // Función para verificar si el proyecto tiene puestos
   const checkProyectoPuestos = (proyectoId: number) => {
     if (typeof window === "undefined") return []
 
     const saved = localStorage.getItem(`proyectoPuestos_${proyectoId}`)
     if (saved) {
       const puestos = JSON.parse(saved)
-      // Filtrar puestos activos (sin fecha de baja)
       return puestos.filter((puesto: ProyectoPuesto) => !puesto.fechaBajaProyectoPuesto)
     }
     return []
   }
 
-  // Función para verificar si el proyecto tiene contratos emitidos
   const checkProyectoContratos = (proyectoId: number) => {
-    // Para los proyectos 3 y 9, simular que no tienen contratos
     if (proyectoId === 3 || proyectoId === 9) {
       return false
     }
@@ -388,9 +398,19 @@ export default function GestionarProyectos() {
     router.push("/crear-proyecto")
   }
 
+  const handleSelectProject = (proyecto: Proyecto) => {
+    setSelectedProyecto(proyecto)
+    setShowOperationDialog(true)
+  }
+
   const handleEditProject = (proyectoId: number) => {
     const proyecto = proyectos.find((p) => p.numeroProyecto === proyectoId)
     if (proyecto) {
+      if (proyecto.numeroProyecto === 7 && proyecto.nombreEstadoProyecto === "Suspendido") {
+        router.push(`/gestion-proyecto-suspendido/${proyectoId}`)
+        return
+      }
+
       const estadosNoEditables = ["En evaluación", "Cancelado", "Finalizado"]
       if (estadosNoEditables.includes(proyecto.nombreEstadoProyecto)) {
         setShowWarningDialog(true)
@@ -403,7 +423,6 @@ export default function GestionarProyectos() {
   const handleChangeEstado = (proyecto: Proyecto) => {
     console.log("Cambiando estado del proyecto:", proyecto.numeroProyecto)
 
-    // Siempre abrir el dialog de estado
     setSelectedProyecto(proyecto)
     setShowEstadoDialog(true)
   }
@@ -438,11 +457,9 @@ export default function GestionarProyectos() {
     setSelectedProyecto(null)
   }
 
-  // Función para manejar cuando se intenta finalizar un proyecto
   const handleFinalizarProyecto = (proyecto: Proyecto) => {
     console.log("Intentando finalizar proyecto:", proyecto.numeroProyecto)
 
-    // Si es el proyecto 3 o 9, verificar contratos
     if (proyecto.numeroProyecto === 3 || proyecto.numeroProyecto === 9) {
       const tieneContratos = checkProyectoContratos(proyecto.numeroProyecto)
       console.log("Tiene contratos:", tieneContratos)
@@ -451,18 +468,16 @@ export default function GestionarProyectos() {
         console.log("No hay contratos, mostrando advertencia")
         setSelectedProyecto(proyecto)
         setShowNoContratosWarning(true)
-        return false // Indica que no se puede finalizar
+        return false
       }
     }
 
-    return true // Indica que se puede finalizar
+    return true
   }
 
-  // Función para verificar puestos cuando se intenta iniciar un proyecto
   const handleIniciarProyecto = (proyecto: Proyecto) => {
     console.log("Intentando iniciar proyecto:", proyecto.numeroProyecto)
 
-    // Si es el proyecto 8 (Sistema de Gestión Hospitalaria), verificar puestos
     if (proyecto.numeroProyecto === 8) {
       const puestosActivos = checkProyectoPuestos(proyecto.numeroProyecto)
       console.log("Puestos activos encontrados:", puestosActivos.length)
@@ -471,15 +486,13 @@ export default function GestionarProyectos() {
         console.log("No hay puestos, mostrando advertencia")
         setSelectedProyecto(proyecto)
         setShowNoPuestosWarning(true)
-        return false // Indica que no se puede iniciar
+        return false
       }
     }
 
-    // El proyecto 1 (Sistema de Gestión Académica) puede iniciarse sin restricciones
-    return true // Indica que se puede iniciar
+    return true
   }
 
-  // Si se muestra la advertencia de no puestos, renderizar pantalla completa
   if (showNoPuestosWarning && selectedProyecto) {
     return (
       <NoPuestosWarningScreen
@@ -490,20 +503,17 @@ export default function GestionarProyectos() {
     )
   }
 
-  // Si se muestra la advertencia de no contratos, renderizar pantalla completa
   if (showNoContratosWarning && selectedProyecto) {
     return <NoContratosWarningScreen proyecto={selectedProyecto} onCancel={handleCancelNoContratos} />
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-      {/* Sistema title - appears on all screens */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-gray-900">Sistema de Prácticas Profesionales</h1>
       </div>
 
       <div className="container mx-auto p-6 space-y-6">
-        {/* The rest of the content remains the same */}
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">Gestión de Proyectos</h1>
@@ -517,44 +527,19 @@ export default function GestionarProyectos() {
 
         <div className="grid gap-4">
           {filteredProyectos.map((proyecto) => (
-            <Card key={proyecto.numeroProyecto} className="hover:shadow-md transition-shadow">
+            <Card
+              key={proyecto.numeroProyecto}
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleSelectProject(proyecto)}
+            >
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
                     <CardTitle className="flex items-center gap-2">{proyecto.nombreProyecto}</CardTitle>
                     <CardDescription>
                       Proyecto #{proyecto.numeroProyecto.toString().padStart(5, "0")} • {proyecto.nombreEmpresa} •{" "}
-                      {proyecto.nombreUniversidad}
+                      {(proyecto.universidades || []).join(", ")}
                     </CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEditProject(proyecto.numeroProyecto)}>
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Editar proyecto</span>
-                    </Button>
-                    {proyecto.nombreEstadoProyecto === "Creado" && (
-                      <Button variant="outline" size="sm" onClick={() => handleManageProyectoPuestos(proyecto)}>
-                        <Briefcase className="h-4 w-4" />
-                        <span className="sr-only">Gestionar Proyecto-Puesto</span>
-                      </Button>
-                    )}
-                    {proyecto.nombreEstadoProyecto === "Creado" && (
-                      <Button variant="outline" size="sm" onClick={() => handleManageProyectoPuestoCarreras(proyecto)}>
-                        <GraduationCap className="h-4 w-4" />
-                        <span className="sr-only">Gestionar Proyecto-Puesto-Carrera</span>
-                      </Button>
-                    )}
-                    <Button variant="outline" size="sm" onClick={() => handlePreview(proyecto)}>
-                      <Eye className="h-4 w-4" />
-                      <span className="sr-only">Ver detalles</span>
-                    </Button>
-                    {proyecto.nombreEstadoProyecto !== "Finalizado" &&
-                      proyecto.nombreEstadoProyecto !== "Cancelado" && (
-                        <Button variant="outline" size="sm" onClick={() => handleChangeEstado(proyecto)}>
-                          <Settings className="h-4 w-4" />
-                          <span className="sr-only">Cambiar estado</span>
-                        </Button>
-                      )}
                   </div>
                 </div>
               </CardHeader>
@@ -617,6 +602,84 @@ export default function GestionarProyectos() {
           </Card>
         )}
 
+        <AlertDialog open={showOperationDialog} onOpenChange={setShowOperationDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Seleccione la operación</AlertDialogTitle>
+              <AlertDialogDescription>
+                ¿Qué operación desea realizar con el proyecto "{selectedProyecto?.nombreProyecto}"?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="grid gap-3 py-4">
+              <Button
+                variant="outline"
+                className="justify-start bg-transparent"
+                onClick={() => {
+                  setShowOperationDialog(false)
+                  if (selectedProyecto) handleEditProject(selectedProyecto.numeroProyecto)
+                }}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Modificar Datos del Proyecto
+              </Button>
+              {selectedProyecto?.nombreEstadoProyecto === "Creado" && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-transparent"
+                    onClick={() => {
+                      setShowOperationDialog(false)
+                      if (selectedProyecto) handleManageProyectoPuestos(selectedProyecto)
+                    }}
+                  >
+                    <Briefcase className="h-4 w-4 mr-2" />
+                    Trabajar con Proyecto-Puesto
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-transparent"
+                    onClick={() => {
+                      setShowOperationDialog(false)
+                      if (selectedProyecto) handleManageProyectoPuestoCarreras(selectedProyecto)
+                    }}
+                  >
+                    <GraduationCap className="h-4 w-4 mr-2" />
+                    Trabajar con Proyecto-Puesto-Carrera
+                  </Button>
+                </>
+              )}
+              <Button
+                variant="outline"
+                className="justify-start bg-transparent"
+                onClick={() => {
+                  setShowOperationDialog(false)
+                  if (selectedProyecto) handlePreview(selectedProyecto)
+                }}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Previsualizar
+              </Button>
+              {selectedProyecto?.nombreEstadoProyecto !== "Finalizado" &&
+                selectedProyecto?.nombreEstadoProyecto !== "Cancelado" && (
+                  <Button
+                    variant="outline"
+                    className="justify-start bg-transparent"
+                    onClick={() => {
+                      setShowOperationDialog(false)
+                      if (selectedProyecto) handleChangeEstado(selectedProyecto)
+                    }}
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Modificar Estado del Proyecto
+                  </Button>
+                )}
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setShowOperationDialog(false)}>Cancelar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         <EstadoProyectoDialog
           open={showEstadoDialog}
           onOpenChange={setShowEstadoDialog}
@@ -632,6 +695,7 @@ export default function GestionarProyectos() {
         <ProyectoPuestoDialog open={showPuestoDialog} onOpenChange={setShowPuestoDialog} proyecto={selectedProyecto} />
 
         <PreviewDialog open={showPreview} onOpenChange={setShowPreview} proyecto={selectedProyecto} />
+
         <AlertDialog open={showWarningDialog} onOpenChange={setShowWarningDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -648,7 +712,7 @@ export default function GestionarProyectos() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        {/* Ejemplos de Prueba - Information Box */}
+
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-8">
           <h3 className="text-base font-semibold text-blue-900 mb-4">Ejemplos de Prueba</h3>
           <ul className="space-y-2 text-sm text-blue-800">
